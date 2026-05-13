@@ -6,14 +6,18 @@
   <title>Clef Shift</title>
   <style>
     :root {
-      --bg: #f4efe6;
-      --paper: #fffdf8;
-      --ink: #1f1a17;
-      --muted: #6b6159;
-      --line: #d8cab8;
-      --accent: #9d3f22;
-      --accent-dark: #7f2f17;
-      --shadow: 0 18px 45px rgba(77, 56, 35, 0.12);
+      --bg: #efe4d1;
+      --paper: rgba(255, 251, 244, 0.92);
+      --paper-strong: #fffdf8;
+      --ink: #1b2523;
+      --muted: #596764;
+      --line: rgba(66, 83, 78, 0.16);
+      --line-strong: rgba(49, 68, 63, 0.26);
+      --accent: #1f5c53;
+      --accent-dark: #16453f;
+      --accent-soft: #dce9e4;
+      --gold: #b88a3b;
+      --shadow: 0 24px 60px rgba(51, 41, 26, 0.12);
     }
 
     * {
@@ -22,49 +26,74 @@
 
     body {
       margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
+      min-height: 100vh;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
       color: var(--ink);
+      text-rendering: optimizeLegibility;
       background:
-        radial-gradient(circle at top left, rgba(157, 63, 34, 0.10), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(120, 88, 40, 0.12), transparent 24%),
-        linear-gradient(180deg, #f9f3ea 0%, var(--bg) 100%);
+        radial-gradient(circle at top left, rgba(31, 92, 83, 0.15), transparent 30%),
+        radial-gradient(circle at top right, rgba(184, 138, 59, 0.16), transparent 26%),
+        linear-gradient(180deg, #f8f1e4 0%, var(--bg) 100%);
     }
 
     .shell {
       width: min(1180px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 36px 0 72px;
+      padding: 28px 0 72px;
     }
 
     .hero {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      padding: 28px 30px 30px;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background:
+        linear-gradient(135deg, rgba(255, 251, 244, 0.96), rgba(246, 237, 223, 0.88)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.3));
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -100px auto;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(31, 92, 83, 0.14), transparent 70%);
+      pointer-events: none;
     }
 
     .eyebrow {
       display: inline-block;
-      padding: 8px 12px;
+      padding: 9px 14px;
       border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255, 253, 248, 0.7);
-      color: var(--muted);
+      border: 1px solid rgba(31, 92, 83, 0.18);
+      background: rgba(255, 250, 242, 0.78);
+      color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-size: 13px;
+      letter-spacing: 0.12em;
+      font-size: 12px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-weight: 700;
     }
 
     h1 {
       margin: 18px 0 12px;
-      font-size: clamp(46px, 8vw, 82px);
-      line-height: 0.95;
-      letter-spacing: -0.04em;
+      font-size: clamp(52px, 8vw, 88px);
+      line-height: 0.92;
+      letter-spacing: -0.05em;
+      max-width: 8ch;
     }
 
     .lead {
-      max-width: 780px;
+      max-width: 760px;
       margin: 0;
-      font-size: clamp(20px, 2.5vw, 28px);
-      line-height: 1.4;
-      color: #332b26;
+      font-size: clamp(20px, 2.4vw, 29px);
+      line-height: 1.45;
+      color: #31403d;
     }
 
     .app-grid {
@@ -79,14 +108,15 @@
     .preview-panel,
     .info-panel {
       background: var(--paper);
-      border: 1px solid rgba(216, 202, 184, 0.92);
-      border-radius: 24px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
       box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
     }
 
     .panel,
     .info-panel {
-      padding: 24px;
+      padding: 26px;
     }
 
     .preview-panel {
@@ -94,29 +124,31 @@
     }
 
     .section-title {
-      margin: 0 0 8px;
-      font-size: 26px;
-      letter-spacing: -0.02em;
+      margin: 0 0 10px;
+      font-size: 29px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
     }
 
     .muted {
       color: var(--muted);
-      line-height: 1.6;
-      font-size: 16px;
+      line-height: 1.65;
+      font-size: 17px;
     }
 
     .dropzone {
       display: block;
       position: relative;
       margin-top: 18px;
-      border: 2px dashed var(--line);
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(243, 228, 214, 0.7), rgba(255, 253, 248, 0.9));
-      padding: 28px 20px;
-      min-height: 160px;
+      border: 1.5px dashed rgba(31, 92, 83, 0.28);
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, rgba(226, 239, 235, 0.56), rgba(255, 253, 248, 0.94));
+      padding: 30px 24px;
+      min-height: 176px;
       text-align: center;
       line-height: 1.35;
-      transition: border-color 160ms ease, transform 160ms ease;
+      transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
       cursor: pointer;
       overflow: hidden;
     }
@@ -124,19 +156,22 @@
     .dropzone:hover,
     .dropzone.is-active {
       border-color: var(--accent);
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: 0 18px 34px rgba(31, 92, 83, 0.10);
     }
 
     .dropzone strong {
       display: block;
       margin-bottom: 10px;
-      font-size: 22px;
+      font-size: 24px;
       line-height: 1.2;
     }
 
     .dropzone span {
       display: block;
       line-height: 1.4;
+      color: var(--muted);
+      font-size: 16px;
     }
 
     .dropzone input {
@@ -152,11 +187,13 @@
 
     .control-group label {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 9px;
       color: var(--muted);
-      font-size: 14px;
+      font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.12em;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-weight: 700;
     }
 
     .select,
@@ -164,46 +201,65 @@
     .text-input,
     .text-area {
       width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px 16px;
+      border: 1px solid rgba(49, 68, 63, 0.18);
+      border-radius: 16px;
+      padding: 15px 16px;
       font: inherit;
-      background: #fffdfa;
+      background: rgba(255, 252, 247, 0.95);
       color: var(--ink);
+      transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
     }
 
     .text-area {
-      min-height: 120px;
+      min-height: 132px;
       resize: vertical;
-      line-height: 1.45;
+      line-height: 1.55;
+    }
+
+    .select:focus,
+    .text-input:focus,
+    .text-area:focus {
+      outline: none;
+      border-color: rgba(31, 92, 83, 0.55);
+      box-shadow: 0 0 0 4px rgba(31, 92, 83, 0.10);
     }
 
     .button {
       border: 0;
-      background: var(--accent);
-      color: #fffaf6;
+      background: linear-gradient(180deg, #27685f, var(--accent-dark));
+      color: #fffdf9;
       font-weight: 700;
       cursor: pointer;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      letter-spacing: 0.01em;
+      box-shadow: 0 12px 24px rgba(22, 69, 63, 0.18);
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
     }
 
     .button.secondary {
-      background: #efe2d3;
+      background: linear-gradient(180deg, #f8efe1, #efe2cc);
       color: var(--ink);
-      border: 1px solid var(--line);
+      border: 1px solid rgba(184, 138, 59, 0.20);
+      box-shadow: none;
     }
 
     .button-row {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       margin-top: 20px;
     }
 
     .status {
       margin-top: 18px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: #f7efe6;
-      color: #413730;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(184, 138, 59, 0.18);
+      background: linear-gradient(180deg, rgba(251, 245, 233, 0.95), rgba(245, 236, 220, 0.92));
+      color: #34413f;
       line-height: 1.5;
       min-height: 56px;
     }
@@ -213,26 +269,29 @@
       justify-content: space-between;
       align-items: center;
       gap: 16px;
-      padding: 20px 24px;
-      border-bottom: 1px solid #eee2d2;
-      background: linear-gradient(180deg, rgba(255, 253, 248, 0.95), rgba(250, 243, 233, 0.92));
+      padding: 22px 26px;
+      border-bottom: 1px solid rgba(49, 68, 63, 0.10);
+      background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(245, 239, 229, 0.94));
     }
 
     .preview-meta strong {
       display: block;
-      font-size: 24px;
-      margin-bottom: 4px;
+      font-size: 28px;
+      margin-bottom: 5px;
+      letter-spacing: -0.02em;
     }
 
     .preview-meta span {
       color: var(--muted);
-      font-size: 15px;
+      font-size: 16px;
     }
 
     .preview-body {
-      padding: 24px;
+      padding: 26px;
       min-height: 640px;
-      background: linear-gradient(180deg, rgba(255, 253, 248, 0.5), rgba(255, 255, 255, 0.92));
+      background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0.48), rgba(255, 255, 255, 0.96));
     }
 
     .preview-grid {
@@ -242,10 +301,10 @@
 
     .stage,
     .generated-output {
-      border: 1px solid #eadfce;
-      border-radius: 20px;
-      background: white;
-      padding: 20px;
+      border: 1px solid rgba(49, 68, 63, 0.10);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 22px;
       overflow: hidden;
     }
 
@@ -263,13 +322,14 @@
 
     .placeholder h2 {
       margin: 0 0 12px;
-      font-size: 34px;
+      font-size: 38px;
       color: var(--ink);
+      letter-spacing: -0.03em;
     }
 
     .placeholder p {
       margin: 0 0 14px;
-      font-size: 18px;
+      font-size: 19px;
       line-height: 1.65;
     }
 
@@ -293,14 +353,14 @@
       width: 100%;
       max-width: 720px;
       padding: 28px;
-      border-radius: 18px;
-      border: 1px solid #eadfce;
+      border-radius: 22px;
+      border: 1px solid rgba(49, 68, 63, 0.10);
       background: #fffdf9;
     }
 
     .notes-box h3 {
       margin: 0 0 10px;
-      font-size: 28px;
+      font-size: 30px;
     }
 
     .notes-box pre {
@@ -321,25 +381,27 @@
     }
 
     .info-card {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 18px;
-      background: rgba(255, 253, 248, 0.85);
+      border: 1px solid rgba(49, 68, 63, 0.10);
+      border-radius: 20px;
+      padding: 20px;
+      background: rgba(255, 253, 248, 0.88);
     }
 
     .info-card strong {
       display: block;
       margin-bottom: 8px;
-      color: var(--accent);
+      color: var(--accent-dark);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-size: 14px;
+      letter-spacing: 0.11em;
+      font-size: 12px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
     }
 
     .info-card p {
       margin: 0;
       color: #362d28;
-      line-height: 1.6;
+      line-height: 1.7;
+      font-size: 17px;
     }
 
     .print-only {
@@ -348,15 +410,17 @@
 
     .generated-output h3 {
       margin: 0 0 14px;
-      font-size: 28px;
+      font-size: 30px;
+      letter-spacing: -0.02em;
     }
 
     .notation-wrap {
       margin-bottom: 18px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-      background: linear-gradient(180deg, #fffefb, #fffaf4);
+      border: 1px solid rgba(184, 138, 59, 0.20);
+      border-radius: 22px;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, #fffefb, #faf4e7);
     }
 
     .notation-svg {
@@ -372,35 +436,69 @@
     }
 
     .generated-card {
-      border: 1px solid var(--line);
-      border-radius: 18px;
+      border: 1px solid rgba(49, 68, 63, 0.10);
+      border-radius: 20px;
       padding: 18px;
-      background: rgba(255, 253, 248, 0.9);
+      background: rgba(255, 253, 248, 0.94);
     }
 
     .generated-card strong {
       display: block;
       margin-bottom: 8px;
-      color: var(--accent);
+      color: var(--accent-dark);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-size: 13px;
+      letter-spacing: 0.11em;
+      font-size: 12px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
     }
 
     .generated-card p {
       margin: 0;
       line-height: 1.6;
       color: #362d28;
+      font-size: 17px;
     }
 
     .generated-card .mono {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      font-size: 15px;
+      font-family: inherit;
+      font-size: inherit;
+      letter-spacing: inherit;
     }
 
     @media (max-width: 920px) {
+      .shell {
+        width: min(100% - 20px, 1180px);
+      }
+
+      .hero {
+        padding: 24px 22px 26px;
+      }
+
       .app-grid {
         grid-template-columns: 1fr;
+      }
+
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      h1 {
+        max-width: none;
+      }
+
+      .lead {
+        font-size: 20px;
+      }
+
+      .preview-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .preview-meta strong {
+        font-size: 24px;
       }
     }
 
@@ -452,7 +550,7 @@
     <section class="hero">
       <span class="eyebrow">Music Translation Workspace</span>
       <h1>Clef Shift</h1>
-      <p class="lead">Upload a score image or PDF and convert note input instantly in the browser</p>
+      <p class="lead">A cleaner workspace for translating melody across clefs, previewing source material, and shaping notation into something more readable.</p>
     </section>
 
     <section class="app-grid">
@@ -764,13 +862,14 @@
         fill: "#fffdfa"
       }));
 
-      const titleText = svgEl("text", {
-        x: staffLeft,
-        y: 34,
-        fill: "#5b4f47",
-        "font-size": 18,
-        "font-family": "Georgia, serif"
-      });
+        const titleText = svgEl("text", {
+          x: staffLeft,
+          y: 34,
+          fill: "#45615d",
+          "font-size": 18,
+          "font-family": "\"Avenir Next\", \"Segoe UI\", sans-serif",
+          "letter-spacing": "0.08em"
+        });
       titleText.textContent = `${fromClef.value} to ${toClef.value}`;
       notationSvg.appendChild(titleText);
 
@@ -778,9 +877,9 @@
         const emptyText = svgEl("text", {
           x: 140,
           y: 150,
-          fill: "#7a6d63",
+          fill: "#70807c",
           "font-size": 20,
-          "font-family": "Georgia, serif"
+          "font-family": "\"Iowan Old Style\", Palatino, Georgia, serif"
         });
         emptyText.textContent = "Enter notes to generate notation";
         notationSvg.appendChild(emptyText);
@@ -799,8 +898,8 @@
             y1: y,
             x2: staffRight,
             y2: y,
-            stroke: "#2c211c",
-            "stroke-width": 1.6
+            stroke: "#24312f",
+            "stroke-width": 1.55
           }));
         }
 
@@ -809,16 +908,16 @@
           y1: staffTop,
           x2: staffLeft,
           y2: bottomY,
-          stroke: "#2c211c",
+          stroke: "#24312f",
           "stroke-width": 3
         }));
 
         const clefText = svgEl("text", {
           x: 58,
           y: staffTop + (clefBottomLines[toClef.value].letter === "G" ? 50 : 46),
-          fill: "#201815",
+          fill: "#1d2b29",
           "font-size": 74,
-          "font-family": "'Times New Roman', serif"
+          "font-family": "'Baskerville', 'Times New Roman', serif"
         });
         clefText.textContent = clefGlyphs[toClef.value];
         notationSvg.appendChild(clefText);
@@ -835,9 +934,9 @@
             const accidentalText = svgEl("text", {
               x: x - 22,
               y: y + 6,
-              fill: "#201815",
+              fill: "#1d2b29",
               "font-size": 26,
-              "font-family": "'Times New Roman', serif"
+              "font-family": "'Baskerville', 'Times New Roman', serif"
             });
             accidentalText.textContent = note.accidental === "#" ? "\u266F" : "\u266D";
             notationSvg.appendChild(accidentalText);
@@ -849,7 +948,7 @@
             cy: y,
             rx: 10,
             ry: 7.5,
-            fill: "#201815",
+            fill: "#1d2b29",
             transform: `rotate(-18 ${x} ${y})`
           }));
 
@@ -858,7 +957,7 @@
             y1: y,
             x2: stemUp ? x + 8 : x - 8,
             y2: stemUp ? y - 48 : y + 48,
-            stroke: "#201815",
+            stroke: "#1d2b29",
             "stroke-width": 2
           }));
 
@@ -875,7 +974,7 @@
               y1: ledgerY,
               x2: x + 16,
               y2: ledgerY,
-              stroke: "#201815",
+              stroke: "#1d2b29",
               "stroke-width": 1.8
             }));
           }
@@ -883,9 +982,9 @@
           const label = svgEl("text", {
             x,
             y: bottomY + 40,
-            fill: "#6d5d53",
+            fill: "#5f6d69",
             "font-size": 14,
-            "font-family": "Georgia, serif",
+            "font-family": "\"Avenir Next\", \"Segoe UI\", sans-serif",
             "text-anchor": "middle"
           });
           label.textContent = `${note.letter}${note.accidental}${note.octave}`;
