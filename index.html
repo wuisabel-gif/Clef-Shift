@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clef Shift</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --paper: #fffdf8;
+      --ink: #1f1a17;
+      --muted: #6b6159;
+      --line: #d8cab8;
+      --accent: #9d3f22;
+      --accent-dark: #7f2f17;
+      --shadow: 0 18px 45px rgba(77, 56, 35, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(157, 63, 34, 0.10), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(120, 88, 40, 0.12), transparent 24%),
+        linear-gradient(180deg, #f9f3ea 0%, var(--bg) 100%);
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 72px;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 248, 0.7);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 13px;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(46px, 8vw, 82px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .lead {
+      max-width: 780px;
+      margin: 0;
+      font-size: clamp(20px, 2.5vw, 28px);
+      line-height: 1.4;
+      color: #332b26;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+      margin-top: 28px;
+    }
+
+    .panel,
+    .preview-panel,
+    .info-panel {
+      background: var(--paper);
+      border: 1px solid rgba(216, 202, 184, 0.92);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel,
+    .info-panel {
+      padding: 24px;
+    }
+
+    .preview-panel {
+      overflow: hidden;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 26px;
+      letter-spacing: -0.02em;
+    }
+
+    .muted {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .dropzone {
+      display: block;
+      position: relative;
+      margin-top: 18px;
+      border: 2px dashed var(--line);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(243, 228, 214, 0.7), rgba(255, 253, 248, 0.9));
+      padding: 28px 20px;
+      min-height: 160px;
+      text-align: center;
+      line-height: 1.35;
+      transition: border-color 160ms ease, transform 160ms ease;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .dropzone:hover,
+    .dropzone.is-active {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .dropzone strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .dropzone span {
+      display: block;
+      line-height: 1.4;
+    }
+
+    .dropzone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .control-group {
+      margin-top: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .select,
+    .button,
+    .text-input,
+    .text-area {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font: inherit;
+      background: #fffdfa;
+      color: var(--ink);
+    }
+
+    .text-area {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .button {
+      border: 0;
+      background: var(--accent);
+      color: #fffaf6;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .button.secondary {
+      background: #efe2d3;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .button-row {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .status {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #f7efe6;
+      color: #413730;
+      line-height: 1.5;
+      min-height: 56px;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      border-bottom: 1px solid #eee2d2;
+      background: linear-gradient(180deg, rgba(255, 253, 248, 0.95), rgba(250, 243, 233, 0.92));
+    }
+
+    .preview-meta strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .preview-meta span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .preview-body {
+      padding: 24px;
+      min-height: 640px;
+      background: linear-gradient(180deg, rgba(255, 253, 248, 0.5), rgba(255, 255, 255, 0.92));
+    }
+
+    .preview-grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    .stage,
+    .generated-output {
+      border: 1px solid #eadfce;
+      border-radius: 20px;
+      background: white;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .stage {
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+    }
+
+    .placeholder {
+      max-width: 560px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .placeholder h2 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      color: var(--ink);
+    }
+
+    .placeholder p {
+      margin: 0 0 14px;
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 78vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 12px 30px rgba(34, 23, 16, 0.12);
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 78vh;
+      border: 0;
+      border-radius: 12px;
+      background: white;
+    }
+
+    .notes-box {
+      width: 100%;
+      max-width: 720px;
+      padding: 28px;
+      border-radius: 18px;
+      border: 1px solid #eadfce;
+      background: #fffdf9;
+    }
+
+    .notes-box h3 {
+      margin: 0 0 10px;
+      font-size: 28px;
+    }
+
+    .notes-box pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 12px 0 0;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #3b312b;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }
+
+    .info-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      background: rgba(255, 253, 248, 0.85);
+    }
+
+    .info-card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 14px;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: #362d28;
+      line-height: 1.6;
+    }
+
+    .print-only {
+      display: none;
+    }
+
+    .generated-output h3 {
+      margin: 0 0 14px;
+      font-size: 28px;
+    }
+
+    .notation-wrap {
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, #fffefb, #fffaf4);
+    }
+
+    .notation-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .generated-output-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .generated-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      background: rgba(255, 253, 248, 0.9);
+    }
+
+    .generated-card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 13px;
+    }
+
+    .generated-card p {
+      margin: 0;
+      line-height: 1.6;
+      color: #362d28;
+    }
+
+    .generated-card .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 15px;
+    }
+
+    @media (max-width: 920px) {
+      .app-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .shell {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      .panel,
+      .info-panel {
+        display: none;
+      }
+
+      .preview-panel {
+        border: 0;
+        box-shadow: none;
+      }
+
+      .preview-header,
+      .preview-body,
+      .stage {
+        padding: 0;
+        border: 0;
+        background: white;
+        box-shadow: none;
+      }
+
+      .preview-image,
+      .preview-frame {
+        max-height: none;
+        height: auto;
+        box-shadow: none;
+      }
+
+      .print-only {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <span class="eyebrow">Music Translation Workspace</span>
+      <h1>Clef Shift</h1>
+      <p class="lead">Upload a score image or PDF and convert note input instantly in the browser</p>
+    </section>
+
+    <section class="app-grid">
+      <aside class="panel">
+        <h2 class="section-title">Upload</h2>
+        <p class="muted">Preview the original file here and use the notes box below for clef conversion</p>
+
+        <label class="dropzone" id="dropzone">
+          <strong>Upload image or PDF</strong>
+          <span>Drag a file here or click to choose</span>
+          <input id="fileInput" type="file" accept="image/*,.pdf,.txt,.ly,.musicxml,.xml,.mid,.midi" />
+        </label>
+
+        <div class="control-group">
+          <label for="fromClef">Source Clef</label>
+          <select id="fromClef" class="select">
+            <option value="treble">Treble clef</option>
+            <option value="bass">Bass clef</option>
+            <option value="alto">Alto clef</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="toClef">Target Clef</label>
+          <select id="toClef" class="select">
+            <option value="bass">Bass clef</option>
+            <option value="treble">Treble clef</option>
+            <option value="alto">Alto clef</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="projectTitle">Project Title</label>
+          <input id="projectTitle" class="text-input" type="text" value="Clef Shift Output" />
+        </div>
+
+        <div class="control-group">
+          <label for="noteInput">Notes To Convert</label>
+          <textarea id="noteInput" class="text-area" placeholder="Detected notes from the upload or entered notes will appear here"></textarea>
+        </div>
+
+        <div class="button-row">
+          <button id="convertButton" class="button" type="button">Convert Notes</button>
+          <button id="downloadXmlButton" class="button secondary" type="button">Download MusicXML</button>
+          <button id="exportPdfButton" class="button" type="button">Save Current View As PDF</button>
+          <button id="downloadImageButton" class="button secondary" type="button">Download Preview Image</button>
+          <button id="clearButton" class="button secondary" type="button">Clear Upload</button>
+        </div>
+
+        <div id="status" class="status">Upload a file or enter notes to start</div>
+      </aside>
+
+      <section class="preview-panel">
+        <div class="preview-header">
+          <div class="preview-meta">
+            <strong id="previewTitle">Instant Preview</strong>
+            <span id="previewSubtitle">No file loaded yet</span>
+          </div>
+          <div id="printLabel" class="print-only"></div>
+        </div>
+        <div class="preview-body">
+          <div class="preview-grid">
+            <div id="previewStage" class="stage">
+              <div class="placeholder">
+                <h2>Original Upload</h2>
+                <p>Images appear on the page right away</p>
+                <p>PDFs open in the preview area right away</p>
+              </div>
+            </div>
+            <div class="generated-output">
+              <h3>Generated Output</h3>
+              <div class="notation-wrap">
+                <svg id="notationSvg" class="notation-svg" viewBox="0 0 920 220" xmlns="http://www.w3.org/2000/svg" aria-label="Generated notation preview"></svg>
+              </div>
+              <div class="generated-output-grid">
+                <div class="generated-card">
+                  <strong>Converted Notes</strong>
+                  <p id="generatedNotes" class="mono">No converted notes yet</p>
+                </div>
+                <div class="generated-card">
+                  <strong>Target Clef</strong>
+                  <p id="generatedClef">Bass clef</p>
+                </div>
+                <div class="generated-card">
+                  <strong>Positions</strong>
+                  <p id="generatedPositions">Upload a file or enter notes to generate notation</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="info-panel">
+      <h2 class="section-title">Conversion Output</h2>
+      <div class="info-grid">
+        <div class="info-card" id="conversionSummary">
+          <strong>Result</strong>
+          <p>Enter notes and press Convert Notes</p>
+        </div>
+        <div class="info-card" id="conversionDetails">
+          <strong>Converted Notes</strong>
+          <p>Same pitch in a different clef will appear here</p>
+        </div>
+        <div class="info-card" id="conversionPositions">
+          <strong>Staff Positions</strong>
+          <p>Target clef staff positions will appear here</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const dropzone = document.getElementById("dropzone");
+    const previewStage = document.getElementById("previewStage");
+    const previewTitle = document.getElementById("previewTitle");
+    const previewSubtitle = document.getElementById("previewSubtitle");
+    const statusBox = document.getElementById("status");
+    const convertButton = document.getElementById("convertButton");
+    const exportPdfButton = document.getElementById("exportPdfButton");
+    const downloadXmlButton = document.getElementById("downloadXmlButton");
+    const downloadImageButton = document.getElementById("downloadImageButton");
+    const clearButton = document.getElementById("clearButton");
+    const projectTitle = document.getElementById("projectTitle");
+    const fromClef = document.getElementById("fromClef");
+    const toClef = document.getElementById("toClef");
+    const noteInput = document.getElementById("noteInput");
+    const printLabel = document.getElementById("printLabel");
+    const conversionSummary = document.getElementById("conversionSummary");
+    const conversionDetails = document.getElementById("conversionDetails");
+    const conversionPositions = document.getElementById("conversionPositions");
+    const generatedNotes = document.getElementById("generatedNotes");
+    const generatedClef = document.getElementById("generatedClef");
+    const generatedPositions = document.getElementById("generatedPositions");
+    const notationSvg = document.getElementById("notationSvg");
+
+    let currentObjectUrl = null;
+    let currentImageUrl = null;
+    let currentFileName = "";
+    let currentFile = null;
+    let currentMusicXml = "";
+    let currentStructuredNotes = [];
+
+    const letterSteps = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+    const clefBottomLines = {
+      treble: { letter: "E", octave: 4 },
+      bass: { letter: "G", octave: 2 },
+      alto: { letter: "F", octave: 3 }
+    };
+    const clefGlyphs = {
+      treble: "\uD834\uDD1E",
+      bass: "\uD834\uDD22",
+      alto: "\uD834\uDD21"
+    };
+
+    function revokeCurrentUrl() {
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function updateHeader(fileName, kind) {
+      const title = projectTitle.value.trim() || "Clef Shift Output";
+      previewTitle.textContent = title;
+      previewSubtitle.textContent = fileName ? `${fileName} • ${kind} • ${fromClef.value} to ${toClef.value}` : "No file loaded yet";
+      printLabel.textContent = `${title} (${fromClef.value} to ${toClef.value})`;
+    }
+
+    function setStatus(message) {
+      statusBox.textContent = message;
+    }
+
+    async function runOcr(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("source_clef", fromClef.value);
+
+      const response = await fetch("/api/ocr", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        let message = "OCR request failed";
+        try {
+          const payload = await response.json();
+          if (payload && payload.error) {
+            message = payload.error;
+          }
+        } catch (error) {
+        }
+        throw new Error(message);
+      }
+
+      return response.json();
+    }
+
+    async function generateScoreData(notesText) {
+      const response = await fetch("/api/score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          notes: notesText,
+          from_clef: fromClef.value,
+          to_clef: toClef.value,
+          title: projectTitle.value.trim() || "Clef Shift Output"
+        })
+      });
+
+      if (!response.ok) {
+        let message = "Score generation failed";
+        try {
+          const payload = await response.json();
+          if (payload && payload.error) {
+            message = payload.error;
+          }
+        } catch (error) {
+        }
+        throw new Error(message);
+      }
+
+      return response.json();
+    }
+
+    function diatonicIndex(letter, octave) {
+      return octave * 7 + letterSteps[letter];
+    }
+
+    function parseNoteToken(token) {
+      const match = token.trim().match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
+      if (!match) {
+        return null;
+      }
+
+      return {
+        raw: token.trim(),
+        letter: match[1].toUpperCase(),
+        accidental: match[2] || "",
+        octave: Number(match[3])
+      };
+    }
+
+    function describeStaffPosition(note, clef) {
+      const bottom = clefBottomLines[clef];
+      const relative = diatonicIndex(note.letter, note.octave) - diatonicIndex(bottom.letter, bottom.octave);
+
+      if (relative >= 0 && relative <= 8) {
+        if (relative % 2 === 0) {
+          return `line ${relative / 2 + 1}`;
+        }
+        return `space ${Math.floor(relative / 2) + 1}`;
+      }
+
+      if (relative < 0) {
+        const distance = -relative;
+        if (distance % 2 === 0) {
+          return `${distance / 2} ledger line below`;
+        }
+        return "ledger space below";
+      }
+
+      const distance = relative - 8;
+      if (distance % 2 === 0) {
+        return `${distance / 2} ledger line above`;
+      }
+      return "ledger space above";
+    }
+
+    function svgEl(name, attrs = {}) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, String(value)));
+      return el;
+    }
+
+    function staffStepForNote(note, clef) {
+      const bottom = clefBottomLines[clef];
+      return diatonicIndex(note.letter, note.octave) - diatonicIndex(bottom.letter, bottom.octave);
+    }
+
+    function renderNotation(notes) {
+      notationSvg.innerHTML = "";
+
+      const systems = Math.max(1, Math.ceil((notes?.length || 0) / 8));
+      const width = 920;
+      const height = Math.max(220, 190 * systems);
+      const staffLeft = 110;
+      const staffRight = 880;
+      const firstStaffTop = 72;
+      const gap = 18;
+
+      notationSvg.appendChild(svgEl("rect", {
+        x: 0,
+        y: 0,
+        width,
+        height,
+        rx: 18,
+        fill: "#fffdfa"
+      }));
+
+      const titleText = svgEl("text", {
+        x: staffLeft,
+        y: 34,
+        fill: "#5b4f47",
+        "font-size": 18,
+        "font-family": "Georgia, serif"
+      });
+      titleText.textContent = `${fromClef.value} to ${toClef.value}`;
+      notationSvg.appendChild(titleText);
+
+      if (!notes || notes.length === 0) {
+        const emptyText = svgEl("text", {
+          x: 140,
+          y: 150,
+          fill: "#7a6d63",
+          "font-size": 20,
+          "font-family": "Georgia, serif"
+        });
+        emptyText.textContent = "Enter notes to generate notation";
+        notationSvg.appendChild(emptyText);
+        return;
+      }
+
+      for (let systemIndex = 0; systemIndex < systems; systemIndex += 1) {
+        const systemNotes = notes.slice(systemIndex * 8, systemIndex * 8 + 8);
+        const staffTop = firstStaffTop + systemIndex * 170;
+        const bottomY = staffTop + gap * 4;
+
+        for (let i = 0; i < 5; i += 1) {
+          const y = staffTop + i * gap;
+          notationSvg.appendChild(svgEl("line", {
+            x1: staffLeft,
+            y1: y,
+            x2: staffRight,
+            y2: y,
+            stroke: "#2c211c",
+            "stroke-width": 1.6
+          }));
+        }
+
+        notationSvg.appendChild(svgEl("line", {
+          x1: staffLeft,
+          y1: staffTop,
+          x2: staffLeft,
+          y2: bottomY,
+          stroke: "#2c211c",
+          "stroke-width": 3
+        }));
+
+        const clefText = svgEl("text", {
+          x: 58,
+          y: staffTop + (clefBottomLines[toClef.value].letter === "G" ? 50 : 46),
+          fill: "#201815",
+          "font-size": 74,
+          "font-family": "'Times New Roman', serif"
+        });
+        clefText.textContent = clefGlyphs[toClef.value];
+        notationSvg.appendChild(clefText);
+
+        const spacing = Math.min(88, Math.max(64, 640 / Math.max(systemNotes.length, 1)));
+        const noteStartX = 170;
+
+        systemNotes.forEach((note, localIndex) => {
+          const x = noteStartX + localIndex * spacing;
+          const step = staffStepForNote(note, toClef.value);
+          const y = bottomY - step * (gap / 2);
+
+          if (note.accidental) {
+            const accidentalText = svgEl("text", {
+              x: x - 22,
+              y: y + 6,
+              fill: "#201815",
+              "font-size": 26,
+              "font-family": "'Times New Roman', serif"
+            });
+            accidentalText.textContent = note.accidental === "#" ? "\u266F" : "\u266D";
+            notationSvg.appendChild(accidentalText);
+          }
+
+          const stemUp = y > staffTop + gap * 2;
+          notationSvg.appendChild(svgEl("ellipse", {
+            cx: x,
+            cy: y,
+            rx: 10,
+            ry: 7.5,
+            fill: "#201815",
+            transform: `rotate(-18 ${x} ${y})`
+          }));
+
+          notationSvg.appendChild(svgEl("line", {
+            x1: stemUp ? x + 8 : x - 8,
+            y1: y,
+            x2: stemUp ? x + 8 : x - 8,
+            y2: stemUp ? y - 48 : y + 48,
+            stroke: "#201815",
+            "stroke-width": 2
+          }));
+
+          const minStep = Math.min(step, 0);
+          const maxStep = Math.max(step, 8);
+
+          for (let ledgerStep = minStep; ledgerStep <= maxStep; ledgerStep += 2) {
+            if (ledgerStep >= 0 && ledgerStep <= 8) {
+              continue;
+            }
+            const ledgerY = bottomY - ledgerStep * (gap / 2);
+            notationSvg.appendChild(svgEl("line", {
+              x1: x - 16,
+              y1: ledgerY,
+              x2: x + 16,
+              y2: ledgerY,
+              stroke: "#201815",
+              "stroke-width": 1.8
+            }));
+          }
+
+          const label = svgEl("text", {
+            x,
+            y: bottomY + 40,
+            fill: "#6d5d53",
+            "font-size": 14,
+            "font-family": "Georgia, serif",
+            "text-anchor": "middle"
+          });
+          label.textContent = `${note.letter}${note.accidental}${note.octave}`;
+          notationSvg.appendChild(label);
+        });
+      }
+    }
+
+    async function renderConversion() {
+      const raw = noteInput.value.trim();
+      if (!raw) {
+        conversionSummary.innerHTML = "<strong>Result</strong><p>Enter notes like A4 B4 C5</p>";
+        conversionDetails.innerHTML = "<strong>Converted Notes</strong><p>Same pitch in a different clef will appear here</p>";
+        conversionPositions.innerHTML = "<strong>Staff Positions</strong><p>Target clef staff positions will appear here</p>";
+        generatedNotes.textContent = "No converted notes yet";
+        generatedClef.textContent = `${toClef.value.charAt(0).toUpperCase()}${toClef.value.slice(1)} clef`;
+        generatedPositions.innerHTML = "Enter notes and convert them";
+        currentMusicXml = "";
+        currentStructuredNotes = [];
+        renderNotation([]);
+        setStatus("Enter notes like A4 B4 C5 to convert");
+        return;
+      }
+
+      const tokens = raw.split(/\s+/).filter(Boolean);
+      const notes = tokens.map(parseNoteToken);
+      const invalid = notes.findIndex((note) => note === null);
+
+      if (invalid !== -1) {
+        conversionSummary.innerHTML = "<strong>Result</strong><p>One or more notes could not be read</p>";
+        conversionDetails.innerHTML = `<strong>Converted Notes</strong><p>Use note names like A4 Bb3 F#5</p>`;
+        conversionPositions.innerHTML = `<strong>Staff Positions</strong><p>Problem note: ${tokens[invalid]}</p>`;
+        generatedNotes.textContent = "Invalid note input";
+        generatedClef.textContent = `${toClef.value.charAt(0).toUpperCase()}${toClef.value.slice(1)} clef`;
+        generatedPositions.innerHTML = `Problem note: ${tokens[invalid]}`;
+        currentMusicXml = "";
+        currentStructuredNotes = [];
+        renderNotation([]);
+        setStatus("Use note names like A4 Bb3 F#5");
+        return;
+      }
+
+      try {
+        const payload = await generateScoreData(raw);
+        const convertedNotes = payload.notes || [];
+        const toPositions = payload.positions || [];
+        currentMusicXml = payload.musicxml || "";
+        currentStructuredNotes = convertedNotes.map(parseNoteToken).filter(Boolean);
+
+        conversionSummary.innerHTML = `<strong>Result</strong><p>${payload.note_count} note${payload.note_count === 1 ? "" : "s"} converted from ${fromClef.value} to ${toClef.value}</p>`;
+        conversionDetails.innerHTML = `<strong>Converted Notes</strong><p>${convertedNotes.join(" ") || "No notes generated"}</p>`;
+        conversionPositions.innerHTML = `<strong>Staff Positions</strong><p>${toPositions.join("<br>") || "No staff positions generated"}</p>`;
+        generatedNotes.textContent = convertedNotes.join(" ") || "No converted notes yet";
+        generatedClef.textContent = `${toClef.value.charAt(0).toUpperCase()}${toClef.value.slice(1)} clef`;
+        generatedPositions.innerHTML = toPositions.join("<br>") || "No positions generated";
+        renderNotation(currentStructuredNotes);
+        setStatus(payload.message || `Converted ${payload.note_count} notes`);
+        updateHeader(currentFileName, currentFileName ? "preview and conversion" : "conversion");
+      } catch (error) {
+        currentMusicXml = "";
+        currentStructuredNotes = notes;
+        renderNotation(notes);
+        setStatus("Structured score generation is available only when the local Clef Shift server is running");
+      }
+    }
+
+    function renderPlaceholder() {
+      previewStage.innerHTML = `
+        <div class="placeholder">
+          <h2>Ready for Upload</h2>
+          <p>Images appear on the page right away</p>
+          <p>PDFs open in the preview area right away</p>
+        </div>
+      `;
+      currentImageUrl = null;
+      currentFileName = "";
+      updateHeader("", "");
+      setStatus("Upload a file or enter notes to start");
+    }
+
+    function renderImage(file, url) {
+      previewStage.innerHTML = "";
+      const img = document.createElement("img");
+      img.className = "preview-image";
+      img.src = url;
+      img.alt = file.name;
+      previewStage.appendChild(img);
+      currentImageUrl = url;
+      currentFileName = file.name;
+      currentFile = file;
+      updateHeader(file.name, "image preview");
+      setStatus("Image loaded and OCR is starting");
+    }
+
+    function renderPdf(file, url) {
+      previewStage.innerHTML = "";
+      const iframe = document.createElement("iframe");
+      iframe.className = "preview-frame";
+      iframe.src = url;
+      iframe.title = file.name;
+      previewStage.appendChild(iframe);
+      currentImageUrl = null;
+      currentFileName = file.name;
+      currentFile = file;
+      updateHeader(file.name, "PDF preview");
+      setStatus("PDF loaded and OCR is starting");
+    }
+
+    function renderText(file, text) {
+      previewStage.innerHTML = `
+        <div class="notes-box">
+          <h3>${file.name}</h3>
+          <p class="muted">Text file loaded for review</p>
+          <pre>${escapeHtml(text)}</pre>
+        </div>
+      `;
+      currentImageUrl = null;
+      currentFileName = file.name;
+      currentFile = file;
+      updateHeader(file.name, "text preview");
+      const compact = text.match(/[A-Ga-g][#b]?-?\d+(?:\s+[A-Ga-g][#b]?-?\d+)*/);
+      if (compact) {
+        noteInput.value = compact[0].trim();
+        renderConversion();
+      } else {
+        setStatus("Text file loaded");
+      }
+    }
+
+    function handleFile(file) {
+      if (!file) {
+        return;
+      }
+
+      revokeCurrentUrl();
+      noteInput.value = "";
+      noteInput.placeholder = "Detecting notes from the upload";
+      currentFile = file;
+      const type = file.type || "";
+      const lowerName = file.name.toLowerCase();
+
+      if (type.startsWith("image/")) {
+        currentObjectUrl = URL.createObjectURL(file);
+        renderImage(file, currentObjectUrl);
+        attemptOcr(file);
+        return;
+      }
+
+      if (type === "application/pdf" || lowerName.endsWith(".pdf")) {
+        currentObjectUrl = URL.createObjectURL(file);
+        renderPdf(file, currentObjectUrl);
+        attemptOcr(file);
+        return;
+      }
+
+      if (type.startsWith("text/") || lowerName.endsWith(".ly") || lowerName.endsWith(".txt") || lowerName.endsWith(".xml") || lowerName.endsWith(".musicxml")) {
+        const reader = new FileReader();
+        reader.onload = () => renderText(file, String(reader.result || ""));
+        reader.onerror = () => setStatus("The file could not be read in the browser");
+        reader.readAsText(file);
+        return;
+      }
+
+      previewStage.innerHTML = `
+        <div class="notes-box">
+          <h3>${file.name}</h3>
+          <p class="muted">This file type is accepted but this preview is basic for now</p>
+          <pre>File size: ${file.size} bytes</pre>
+        </div>
+      `;
+      currentImageUrl = null;
+      currentFileName = file.name;
+      updateHeader(file.name, "basic file preview");
+      setStatus("File loaded but browser preview for this type is limited");
+    }
+
+    async function attemptOcr(file) {
+      try {
+        const payload = await runOcr(file);
+        if (payload.notes && payload.notes.length > 0) {
+          noteInput.value = payload.notes.join(" ");
+          noteInput.placeholder = "Detected notes from the upload";
+          await renderConversion();
+          const mode = payload.detection_mode || payload.ocr_mode || "detection";
+          setStatus(`${payload.message} using ${mode}`);
+          return true;
+        }
+
+        noteInput.value = "";
+        noteInput.placeholder = "No notes detected from this upload";
+        setStatus(payload.message || "OCR finished but no notes were detected");
+        return false;
+      } catch (error) {
+        noteInput.placeholder = "Detection needs the local Clef Shift server";
+        setStatus("OCR is available only when the local Clef Shift server is running on localhost:8000");
+        return false;
+      }
+    }
+
+    convertButton.addEventListener("click", async () => {
+      if (!noteInput.value.trim() && currentFile) {
+        setStatus("Trying to read notes from the uploaded file");
+        const found = await attemptOcr(currentFile);
+        if (found) {
+          return;
+        }
+      }
+
+      await renderConversion();
+    });
+
+    downloadXmlButton.addEventListener("click", () => {
+      if (!currentMusicXml) {
+        setStatus("Convert notes first to generate MusicXML");
+        return;
+      }
+
+      const blob = new Blob([currentMusicXml], { type: "application/vnd.recordare.musicxml+xml" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${(projectTitle.value.trim() || "clef-shift-output").replace(/\s+/g, "-").toLowerCase()}.musicxml`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus("MusicXML download started");
+    });
+
+    fileInput.addEventListener("change", (event) => {
+      handleFile(event.target.files[0]);
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("is-active");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("is-active");
+      });
+    });
+
+    dropzone.addEventListener("drop", (event) => {
+      handleFile(event.dataTransfer.files[0]);
+    });
+
+    exportPdfButton.addEventListener("click", () => {
+      updateHeader(currentFileName, currentFileName ? "export view" : "preview");
+      setStatus("Opening the browser print dialog so you can save as PDF");
+      window.print();
+    });
+
+    downloadImageButton.addEventListener("click", () => {
+      if (!currentImageUrl) {
+        setStatus("Upload an image first if you want to download the preview");
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = currentImageUrl;
+      link.download = currentFileName || "clef-shift-preview";
+      link.click();
+      setStatus("Preview image download started");
+    });
+
+    clearButton.addEventListener("click", () => {
+      revokeCurrentUrl();
+      fileInput.value = "";
+      currentFile = null;
+      renderPlaceholder();
+    });
+
+    [projectTitle, fromClef, toClef].forEach((element) => {
+      element.addEventListener("input", () => updateHeader(currentFileName, currentFileName ? "preview" : ""));
+      element.addEventListener("change", () => {
+        updateHeader(currentFileName, currentFileName ? "preview" : "");
+        if (noteInput.value.trim()) {
+          renderConversion();
+        }
+      });
+    });
+
+    renderPlaceholder();
+    renderConversion();
+  </script>
+</body>
+</html>
