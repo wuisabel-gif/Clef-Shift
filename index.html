@@ -6,18 +6,19 @@
   <title>Clef Shift</title>
   <style>
     :root {
-      --bg: #efe4d1;
-      --paper: rgba(255, 251, 244, 0.92);
-      --paper-strong: #fffdf8;
-      --ink: #1b2523;
+      --bg: #f4ede0;
+      --sidebar-bg: #eae0cd;
+      --paper: #fffdfa;
+      --ink: #161f1d;
       --muted: #596764;
-      --line: rgba(66, 83, 78, 0.16);
-      --line-strong: rgba(49, 68, 63, 0.26);
+      --line: rgba(66, 83, 78, 0.12);
+      --line-strong: rgba(49, 68, 63, 0.22);
       --accent: #1f5c53;
-      --accent-dark: #16453f;
-      --accent-soft: #dce9e4;
+      --accent-dark: #123b35;
+      --accent-soft: #e3ede9;
       --gold: #b88a3b;
-      --shadow: 0 24px 60px rgba(51, 41, 26, 0.12);
+      --shadow-sm: 0 4px 12px rgba(51, 41, 26, 0.04);
+      --shadow: 0 20px 48px rgba(51, 41, 26, 0.1);
     }
 
     * {
@@ -31,147 +32,160 @@
       color: var(--ink);
       text-rendering: optimizeLegibility;
       background:
-        radial-gradient(circle at top left, rgba(31, 92, 83, 0.15), transparent 30%),
-        radial-gradient(circle at top right, rgba(184, 138, 59, 0.16), transparent 26%),
-        linear-gradient(180deg, #f8f1e4 0%, var(--bg) 100%);
+        radial-gradient(circle at top left, rgba(31, 92, 83, 0.12), transparent 35%),
+        radial-gradient(circle at top right, rgba(184, 138, 59, 0.12), transparent 30%),
+        linear-gradient(180deg, #fbf7f0 0%, var(--bg) 100%);
     }
 
     .shell {
-      width: min(1180px, calc(100% - 32px));
+      width: min(1240px, calc(100% - 40px));
       margin: 0 auto;
-      padding: 28px 0 72px;
+      padding: 40px 0 80px;
     }
 
+    /* ---- Hero ---- */
     .hero {
-      margin-bottom: 28px;
-      padding: 28px 30px 30px;
+      margin-bottom: 32px;
+      padding: 36px 40px;
       border: 1px solid var(--line);
-      border-radius: 30px;
-      background:
-        linear-gradient(135deg, rgba(255, 251, 244, 0.96), rgba(246, 237, 223, 0.88)),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.3));
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(255, 253, 249, 0.96), rgba(246, 237, 223, 0.9));
       box-shadow: var(--shadow);
       position: relative;
       overflow: hidden;
     }
 
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: auto -80px -100px auto;
-      width: 280px;
-      height: 280px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(31, 92, 83, 0.14), transparent 70%);
-      pointer-events: none;
-    }
-
     .eyebrow {
       display: inline-block;
-      padding: 9px 14px;
+      padding: 6px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(31, 92, 83, 0.18);
-      background: rgba(255, 250, 242, 0.78);
+      border: 1px solid rgba(31, 92, 83, 0.15);
+      background: rgba(255, 255, 255, 0.8);
       color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-size: 12px;
+      letter-spacing: 0.14em;
+      font-size: 11px;
       font-family: "Avenir Next", "Segoe UI", sans-serif;
       font-weight: 700;
     }
 
     h1 {
-      margin: 18px 0 12px;
-      font-size: clamp(52px, 8vw, 88px);
-      line-height: 0.92;
-      letter-spacing: -0.05em;
-      max-width: 8ch;
+      margin: 14px 0 10px;
+      font-size: clamp(40px, 6vw, 64px);
+      line-height: 1.0;
+      letter-spacing: -0.04em;
     }
 
     .lead {
-      max-width: 760px;
+      max-width: 680px;
       margin: 0;
-      font-size: clamp(20px, 2.4vw, 29px);
-      line-height: 1.45;
-      color: #31403d;
+      font-size: clamp(18px, 2vw, 22px);
+      line-height: 1.5;
+      color: #3a4a47;
     }
 
+    .hero-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-text { min-width: 0; }
+
+    .hero-staff {
+      margin-top: 24px;
+      height: 33px;
+      width: min(440px, 80%);
+      background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 1px, transparent 1px 8px);
+      mask-image: linear-gradient(90deg, #000 40%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent);
+    }
+
+    .hero-emblem {
+      flex: none;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 36% 30%, #fffdf9, #eddcb8);
+      border: 1px solid rgba(184, 138, 59, 0.4);
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.5), 0 12px 28px rgba(51, 41, 26, 0.12);
+    }
+
+    .hero-emblem .seal {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 42px;
+      color: var(--accent-dark);
+    }
+
+    .hero-emblem .seal .arrow {
+      font-size: 18px;
+      color: var(--gold);
+    }
+
+    /* ---- Layout Grid ---- */
     .app-grid {
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 24px;
+      grid-template-columns: 380px 1fr;
+      gap: 32px;
       align-items: start;
-      margin-top: 28px;
     }
 
-    .panel,
-    .preview-panel,
-    .info-panel {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-    }
-
-    .panel,
-    .info-panel {
-      padding: 26px;
-    }
-
-    .preview-panel {
-      overflow: hidden;
+    /* ---- Controls Sidebar Panel ---- */
+    .panel {
+      background: var(--sidebar-bg);
+      border: 1px solid rgba(49, 68, 63, 0.08);
+      border-radius: 24px;
+      padding: 30px 24px;
+      box-shadow: var(--shadow-sm);
     }
 
     .section-title {
-      margin: 0 0 10px;
-      font-size: 29px;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: -0.02em;
     }
 
     .muted {
       color: var(--muted);
-      line-height: 1.65;
-      font-size: 17px;
+      line-height: 1.5;
+      font-size: 15px;
+      margin: 0 0 20px;
     }
 
+    /* ---- Dropzone ---- */
     .dropzone {
       display: block;
       position: relative;
-      margin-top: 18px;
-      border: 1.5px dashed rgba(31, 92, 83, 0.28);
-      border-radius: 24px;
-      background:
-        linear-gradient(180deg, rgba(226, 239, 235, 0.56), rgba(255, 253, 248, 0.94));
-      padding: 30px 24px;
-      min-height: 176px;
+      border: 1.5px dashed rgba(31, 92, 83, 0.25);
+      border-radius: 16px;
+      background: var(--paper);
+      padding: 24px 16px;
       text-align: center;
-      line-height: 1.35;
-      transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+      transition: border-color 0.2s ease, transform 0.2s ease;
       cursor: pointer;
-      overflow: hidden;
     }
 
-    .dropzone:hover,
-    .dropzone.is-active {
+    .dropzone:hover, .dropzone.is-active {
       border-color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 0 18px 34px rgba(31, 92, 83, 0.10);
+      transform: translateY(-1px);
     }
 
     .dropzone strong {
       display: block;
-      margin-bottom: 10px;
-      font-size: 24px;
-      line-height: 1.2;
+      font-size: 18px;
+      margin-bottom: 4px;
     }
 
     .dropzone span {
-      display: block;
-      line-height: 1.4;
+      font-size: 13px;
       color: var(--muted);
-      font-size: 16px;
     }
 
     .dropzone input {
@@ -181,161 +195,333 @@
       cursor: pointer;
     }
 
+    /* ---- Form Inputs ---- */
     .control-group {
       margin-top: 20px;
     }
 
     .control-group label {
       display: block;
-      margin-bottom: 9px;
+      margin-bottom: 6px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       font-family: "Avenir Next", "Segoe UI", sans-serif;
       font-weight: 700;
     }
 
-    .select,
-    .button,
-    .text-input,
-    .text-area {
+    .select, .text-input, .text-area {
       width: 100%;
-      border: 1px solid rgba(49, 68, 63, 0.18);
-      border-radius: 16px;
-      padding: 15px 16px;
+      border: 1px solid rgba(49, 68, 63, 0.15);
+      border-radius: 12px;
+      padding: 12px 14px;
       font: inherit;
-      background: rgba(255, 252, 247, 0.95);
+      font-size: 16px;
+      background: var(--paper);
       color: var(--ink);
-      transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .text-area {
-      min-height: 132px;
+      min-height: 100px;
       resize: vertical;
-      line-height: 1.55;
+      line-height: 1.45;
+      font-size: 15px;
     }
 
-    .select:focus,
-    .text-input:focus,
-    .text-area:focus {
+    .select:focus, .text-input:focus, .text-area:focus {
       outline: none;
-      border-color: rgba(31, 92, 83, 0.55);
-      box-shadow: 0 0 0 4px rgba(31, 92, 83, 0.10);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 92, 83, 0.12);
+    }
+
+    /* ---- Button Hierarchy Refactor ---- */
+    .button-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 24px;
     }
 
     .button {
+      width: 100%;
       border: 0;
-      background: linear-gradient(180deg, #27685f, var(--accent-dark));
-      color: #fffdf9;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 16px;
       font-weight: 700;
       cursor: pointer;
       font-family: "Avenir Next", "Segoe UI", sans-serif;
-      letter-spacing: 0.01em;
-      box-shadow: 0 12px 24px rgba(22, 69, 63, 0.18);
+      transition: background 0.15s ease, transform 0.1s ease;
+      text-align: center;
     }
 
-    .button:hover {
-      transform: translateY(-1px);
+    /* Primary Convert Action Call To Action */
+    #convertButton {
+      background: linear-gradient(180deg, #2a7369, var(--accent-dark));
+      color: #fffdf9;
+      box-shadow: 0 8px 20px rgba(22, 69, 63, 0.15);
     }
 
+    #convertButton:hover {
+      background: var(--accent-dark);
+    }
+
+    /* Secondary Utilities structured neatly row by row */
     .button.secondary {
-      background: linear-gradient(180deg, #f8efe1, #efe2cc);
-      color: var(--ink);
-      border: 1px solid rgba(184, 138, 59, 0.20);
-      box-shadow: none;
+      background: #fffdfa;
+      color: var(--accent);
+      border: 1px solid rgba(31, 92, 83, 0.18);
+      font-size: 14px;
+      padding: 10px 16px;
     }
 
-    .button-row {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 20px;
+    .button.secondary:hover {
+      background: var(--accent-soft);
+    }
+
+    /* Soft Clear Action at the Bottom */
+    #clearButton {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px;
+      margin-top: 4px;
+    }
+
+    #clearButton:hover {
+      color: #8c2a2a;
+      border-color: rgba(140, 42, 42, 0.15);
+      background: rgba(140, 42, 42, 0.04);
     }
 
     .status {
-      margin-top: 18px;
-      padding: 16px 18px;
-      border-radius: 18px;
-      border: 1px solid rgba(184, 138, 59, 0.18);
-      background: linear-gradient(180deg, rgba(251, 245, 233, 0.95), rgba(245, 236, 220, 0.92));
-      color: #34413f;
-      line-height: 1.5;
-      min-height: 56px;
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(184, 138, 59, 0.15);
+      background: #fffcf6;
+      color: #443a32;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    /* ---- Main Work Output Canvas Panel ---- */
+    .preview-panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
     .preview-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      padding: 22px 26px;
-      border-bottom: 1px solid rgba(49, 68, 63, 0.10);
-      background:
-        linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(245, 239, 229, 0.94));
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid rgba(49, 68, 63, 0.06);
     }
 
     .preview-meta strong {
       display: block;
-      font-size: 28px;
-      margin-bottom: 5px;
+      font-size: 32px;
       letter-spacing: -0.02em;
+      margin-bottom: 4px;
     }
 
     .preview-meta span {
       color: var(--muted);
-      font-size: 16px;
+      font-size: 15px;
     }
 
     .preview-body {
-      padding: 26px;
-      min-height: 640px;
-      background:
-        linear-gradient(180deg, rgba(255, 253, 248, 0.48), rgba(255, 255, 255, 0.96));
+      padding: 32px;
     }
 
     .preview-grid {
-      display: grid;
-      gap: 20px;
-    }
-
-    .stage,
-    .generated-output {
-      border: 1px solid rgba(49, 68, 63, 0.10);
-      border-radius: 22px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 22px;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
     }
 
     .stage {
-      min-height: 280px;
+      min-height: 200px;
       display: grid;
       place-items: center;
-    }
-
-    .placeholder {
-      max-width: 560px;
-      text-align: center;
-      color: var(--muted);
+      border: 1px dashed rgba(49, 68, 63, 0.1);
+      border-radius: 16px;
+      background: #faf7f0;
     }
 
     .placeholder h2 {
-      margin: 0 0 12px;
-      font-size: 38px;
-      color: var(--ink);
-      letter-spacing: -0.03em;
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: -0.02em;
     }
 
     .placeholder p {
-      margin: 0 0 14px;
-      font-size: 19px;
-      line-height: 1.65;
+      margin: 0;
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.4;
     }
+
+    .generated-output h3 {
+      margin: 0 0 16px;
+      font-size: 26px;
+      letter-spacing: -0.02em;
+    }
+
+    .notation-wrap {
+      margin-bottom: 24px;
+      border: 1px solid rgba(184, 138, 59, 0.18);
+      border-radius: 16px;
+      padding: 24px;
+      background: #fffdf9;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.01);
+    }
+
+    .notation-caption {
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(184, 138, 59, 0.2);
+      background: #fffbf2;
+      color: var(--accent-dark);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .generated-output-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .generated-card {
+      border: 1px solid rgba(49, 68, 63, 0.08);
+      border-radius: 14px;
+      padding: 16px;
+      background: #faf9f5;
+    }
+
+    .generated-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--accent-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    .generated-card p {
+      margin: 0;
+      font-size: 16px;
+      color: #332b24;
+    }
+
+    /* ---- Bottom Global Readout Panel ---- */
+    .info-panel {
+      margin-top: 32px;
+      padding: 32px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .info-card {
+      border: 1px solid rgba(49, 68, 63, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+      background: #fffdfa;
+    }
+
+    .info-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--accent-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    .info-card p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ---- Footer ---- */
+    .site-footer {
+      padding: 40px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .site-footer .footer-rule {
+      width: 100%;
+      max-width: 400px;
+      height: 1px;
+      border: 0;
+      background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+      margin-bottom: 12px;
+    }
+
+    .site-footer .footer-clef {
+      font-size: 28px;
+      line-height: 1;
+      color: var(--gold);
+      opacity: 0.85;
+    }
+
+    .site-footer p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      letter-spacing: 0.04em;
+    }
+
+    /* ---- Responsive Design Tweaks ---- */
+    @media (max-width: 960px) {
+      .app-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .shell {
+        padding: 20px 0 40px;
+      }
+      .hero-emblem { display: none; }
+    }
+
+    /* ============================================================
+       Functional + motion rules (kept from the working build; these
+       size the uploaded-file preview, the notation SVG, print/PDF
+       export, the footer mark, and the subtle motion).
+       ============================================================ */
+
+    .print-only { display: none; }
 
     .preview-image {
       max-width: 100%;
-      max-height: 78vh;
+      max-height: 70vh;
       object-fit: contain;
       border-radius: 10px;
       box-shadow: 0 12px 30px rgba(34, 23, 16, 0.12);
@@ -343,84 +529,10 @@
 
     .preview-frame {
       width: 100%;
-      height: 78vh;
+      height: 70vh;
       border: 0;
       border-radius: 12px;
-      background: white;
-    }
-
-    .notes-box {
-      width: 100%;
-      max-width: 720px;
-      padding: 28px;
-      border-radius: 22px;
-      border: 1px solid rgba(49, 68, 63, 0.10);
-      background: #fffdf9;
-    }
-
-    .notes-box h3 {
-      margin: 0 0 10px;
-      font-size: 30px;
-    }
-
-    .notes-box pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin: 12px 0 0;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      font-size: 15px;
-      line-height: 1.7;
-      color: #3b312b;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 18px;
-      margin-top: 24px;
-    }
-
-    .info-card {
-      border: 1px solid rgba(49, 68, 63, 0.10);
-      border-radius: 20px;
-      padding: 20px;
-      background: rgba(255, 253, 248, 0.88);
-    }
-
-    .info-card strong {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--accent-dark);
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      font-size: 12px;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
-    }
-
-    .info-card p {
-      margin: 0;
-      color: #362d28;
-      line-height: 1.7;
-      font-size: 17px;
-    }
-
-    .print-only {
-      display: none;
-    }
-
-    .generated-output h3 {
-      margin: 0 0 14px;
-      font-size: 30px;
-      letter-spacing: -0.02em;
-    }
-
-    .notation-wrap {
-      margin-bottom: 18px;
-      border: 1px solid rgba(184, 138, 59, 0.20);
-      border-radius: 22px;
-      padding: 18px;
-      background:
-        linear-gradient(180deg, #fffefb, #faf4e7);
+      background: #ffffff;
     }
 
     .notation-svg {
@@ -429,100 +541,96 @@
       display: block;
     }
 
-    .generated-output-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
+    .notation-caption .arrow { color: var(--gold); }
+
+    .placeholder {
+      max-width: 560px;
+      text-align: center;
+      color: var(--muted);
     }
 
-    .generated-card {
-      border: 1px solid rgba(49, 68, 63, 0.10);
-      border-radius: 20px;
-      padding: 18px;
-      background: rgba(255, 253, 248, 0.94);
+    .notes-box {
+      width: 100%;
+      max-width: 720px;
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--paper);
     }
 
-    .generated-card strong {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--accent-dark);
-      text-transform: uppercase;
-      letter-spacing: 0.11em;
-      font-size: 12px;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    .notes-box h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
     }
 
-    .generated-card p {
-      margin: 0;
-      line-height: 1.6;
-      color: #362d28;
-      font-size: 17px;
+    .notes-box pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 12px 0 0;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #3b312b;
     }
 
-    .generated-card .mono {
-      font-family: inherit;
-      font-size: inherit;
-      letter-spacing: inherit;
-    }
-
-    @media (max-width: 920px) {
-      .shell {
-        width: min(100% - 20px, 1180px);
+    /* Subtle, state-aware motion (reduced-motion safe) */
+    @media (prefers-reduced-motion: no-preference) {
+      .hero,
+      .panel,
+      .preview-panel {
+        animation: cs-rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
       }
+      .panel { animation-delay: 80ms; }
+      .preview-panel { animation-delay: 140ms; }
 
-      .hero {
-        padding: 24px 22px 26px;
-      }
-
-      .app-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .button-row {
-        grid-template-columns: 1fr;
+      .note-mark {
+        animation: cs-note-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        transform-box: fill-box;
+        transform-origin: center;
       }
     }
 
-    @media (max-width: 640px) {
-      h1 {
-        max-width: none;
-      }
+    @keyframes cs-rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: none; }
+    }
 
-      .lead {
-        font-size: 20px;
-      }
+    @keyframes cs-note-in {
+      from { opacity: 0; transform: translateY(7px) scale(0.82); }
+      to   { opacity: 1; transform: none; }
+    }
 
-      .preview-header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
+    .button:active { transform: translateY(1px); }
 
-      .preview-meta strong {
-        font-size: 24px;
-      }
+    .status { transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease; }
+    .status.is-busy {
+      border-color: rgba(31, 92, 83, 0.28);
+      background-size: 220% 100%;
+      background-image: linear-gradient(
+        100deg,
+        #fffcf6 0%,
+        var(--accent-soft) 45%,
+        #fffcf6 90%
+      );
+      animation: cs-shimmer 1300ms ease-in-out infinite;
+    }
+    @keyframes cs-shimmer {
+      0%   { background-position: 140% 0; }
+      100% { background-position: -40% 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .status.is-busy { animation: none; }
+      .dropzone:hover, .dropzone.is-active { transform: none; }
     }
 
     @media print {
-      body {
-        background: white;
-      }
-
-      .shell {
-        width: 100%;
-        padding: 0;
-      }
-
+      body { background: white; }
+      .shell { width: 100%; padding: 0; }
       .hero,
       .panel,
-      .info-panel {
-        display: none;
-      }
-
-      .preview-panel {
-        border: 0;
-        box-shadow: none;
-      }
-
+      .site-footer { display: none; }
+      .preview-panel { border: 0; box-shadow: none; }
       .preview-header,
       .preview-body,
       .stage {
@@ -531,26 +639,26 @@
         background: white;
         box-shadow: none;
       }
-
       .preview-image,
-      .preview-frame {
-        max-height: none;
-        height: auto;
-        box-shadow: none;
-      }
-
-      .print-only {
-        display: block;
-      }
+      .preview-frame { max-height: none; height: auto; box-shadow: none; }
+      .print-only { display: block; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
     <section class="hero">
-      <span class="eyebrow">Music Translation Workspace</span>
-      <h1>Clef Shift</h1>
-      <p class="lead">A cleaner workspace for translating melody across clefs, previewing source material, and shaping notation into something more readable.</p>
+      <div class="hero-row">
+        <div class="hero-text">
+          <span class="eyebrow">Music Translation Workspace</span>
+          <h1>Clef Shift</h1>
+          <p class="lead">Upload notation, convert notes between clefs, and export a clean practice-ready score.</p>
+          <div class="hero-staff" aria-hidden="true"></div>
+        </div>
+        <div class="hero-emblem" aria-hidden="true">
+          <span class="seal">𝄞<span class="arrow">→</span>𝄢</span>
+        </div>
+      </div>
     </section>
 
     <section class="app-grid">
@@ -595,9 +703,9 @@
         <div class="button-row">
           <button id="convertButton" class="button" type="button">Convert Notes</button>
           <button id="downloadXmlButton" class="button secondary" type="button">Download MusicXML</button>
-          <button id="exportPdfButton" class="button" type="button">Save Current View As PDF</button>
-          <button id="downloadImageButton" class="button secondary" type="button">Download Preview Image</button>
-          <button id="clearButton" class="button secondary" type="button">Clear Upload</button>
+          <button id="exportPdfButton" class="button secondary" type="button">Save PDF</button>
+          <button id="downloadImageButton" class="button secondary" type="button">Download Image</button>
+          <button id="clearButton" class="button" type="button">Clear Upload</button>
         </div>
 
         <div id="status" class="status">Upload a file or enter notes to start</div>
@@ -623,6 +731,7 @@
             <div class="generated-output">
               <h3>Generated Output</h3>
               <div class="notation-wrap">
+                <figcaption id="notationCaption" class="notation-caption">Treble <span class="arrow">→</span> Bass</figcaption>
                 <svg id="notationSvg" class="notation-svg" viewBox="0 0 920 220" xmlns="http://www.w3.org/2000/svg" aria-label="Generated notation preview"></svg>
               </div>
               <div class="generated-output-grid">
@@ -644,25 +753,13 @@
         </div>
       </section>
     </section>
-
-    <section class="info-panel">
-      <h2 class="section-title">Conversion Output</h2>
-      <div class="info-grid">
-        <div class="info-card" id="conversionSummary">
-          <strong>Result</strong>
-          <p>Enter notes and press Convert Notes</p>
-        </div>
-        <div class="info-card" id="conversionDetails">
-          <strong>Converted Notes</strong>
-          <p>Same pitch in a different clef will appear here</p>
-        </div>
-        <div class="info-card" id="conversionPositions">
-          <strong>Staff Positions</strong>
-          <p>Target clef staff positions will appear here</p>
-        </div>
-      </div>
-    </section>
   </div>
+
+  <footer class="site-footer">
+    <hr class="footer-rule" />
+    <span class="footer-clef" aria-hidden="true">&#119074;</span>
+    <p>&copy; 2026 wuisabel-gif &middot; All Rights Reserved</p>
+  </footer>
 
   <script>
     const fileInput = document.getElementById("fileInput");
@@ -681,13 +778,11 @@
     const toClef = document.getElementById("toClef");
     const noteInput = document.getElementById("noteInput");
     const printLabel = document.getElementById("printLabel");
-    const conversionSummary = document.getElementById("conversionSummary");
-    const conversionDetails = document.getElementById("conversionDetails");
-    const conversionPositions = document.getElementById("conversionPositions");
     const generatedNotes = document.getElementById("generatedNotes");
     const generatedClef = document.getElementById("generatedClef");
     const generatedPositions = document.getElementById("generatedPositions");
     const notationSvg = document.getElementById("notationSvg");
+    const notationCaption = document.getElementById("notationCaption");
 
     let currentObjectUrl = null;
     let currentImageUrl = null;
@@ -703,9 +798,9 @@
       alto: { letter: "F", octave: 3 }
     };
     const clefGlyphs = {
-      treble: "\uD834\uDD1E",
-      bass: "\uD834\uDD22",
-      alto: "\uD834\uDD21"
+      treble: "𝄞",
+      bass: "𝄢",
+      alto: "𝄡"
     };
 
     function revokeCurrentUrl() {
@@ -733,15 +828,32 @@
       statusBox.textContent = message;
     }
 
+    function setBusy(on) {
+      statusBox.classList.toggle("is-busy", Boolean(on));
+    }
+
+    function updateNotationCaption() {
+      if (!notationCaption) return;
+      const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+      notationCaption.innerHTML = `${cap(fromClef.value)} <span class="arrow">→</span> ${cap(toClef.value)}`;
+    }
+
     async function runOcr(file) {
+      setBusy(true);
+      setStatus("Reading notation from the upload…");
       const formData = new FormData();
       formData.append("file", file);
       formData.append("source_clef", fromClef.value);
 
-      const response = await fetch("/api/ocr", {
-        method: "POST",
-        body: formData
-      });
+      let response;
+      try {
+        response = await fetch("/api/ocr", {
+          method: "POST",
+          body: formData
+        });
+      } finally {
+        setBusy(false);
+      }
 
       if (!response.ok) {
         let message = "OCR request failed";
@@ -844,161 +956,156 @@
 
     function renderNotation(notes) {
       notationSvg.innerHTML = "";
+      updateNotationCaption();
 
-      const systems = Math.max(1, Math.ceil((notes?.length || 0) / 8));
       const width = 920;
-      const height = Math.max(220, 190 * systems);
       const staffLeft = 110;
       const staffRight = 880;
-      const firstStaffTop = 72;
+      const noteStartX = 170;
       const gap = 18;
+      const half = gap / 2;
+      const perSystem = 8;
+      const clef = toClef.value;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      notationSvg.appendChild(svgEl("rect", {
-        x: 0,
-        y: 0,
-        width,
-        height,
-        rx: 18,
-        fill: "#fffdfa"
-      }));
-
-        const titleText = svgEl("text", {
-          x: staffLeft,
-          y: 34,
-          fill: "#45615d",
-          "font-size": 18,
-          "font-family": "\"Avenir Next\", \"Segoe UI\", sans-serif",
-          "letter-spacing": "0.08em"
-        });
-      titleText.textContent = `${fromClef.value} to ${toClef.value}`;
-      notationSvg.appendChild(titleText);
+      const drawBackground = (h) => {
+        const rect = svgEl("rect", { x: 0, y: 0, width, height: h, rx: 18, fill: "#fffdfa" });
+        notationSvg.insertBefore(rect, notationSvg.firstChild);
+      };
 
       if (!notes || notes.length === 0) {
+        const h = 200;
+        notationSvg.setAttribute("viewBox", `0 0 ${width} ${h}`);
+        drawBackground(h);
         const emptyText = svgEl("text", {
-          x: 140,
-          y: 150,
+          x: width / 2,
+          y: h / 2 + 6,
           fill: "#70807c",
           "font-size": 20,
-          "font-family": "\"Iowan Old Style\", Palatino, Georgia, serif"
+          "font-family": "\"Iowan Old Style\", Palatino, Georgia, serif",
+          "text-anchor": "middle"
         });
-        emptyText.textContent = "Enter notes to generate notation";
+        emptyText.textContent = "Converted notation will appear here";
         notationSvg.appendChild(emptyText);
         return;
       }
 
-      for (let systemIndex = 0; systemIndex < systems; systemIndex += 1) {
-        const systemNotes = notes.slice(systemIndex * 8, systemIndex * 8 + 8);
-        const staffTop = firstStaffTop + systemIndex * 170;
-        const bottomY = staffTop + gap * 4;
+      // Break into systems, then measure each system's true vertical extent so
+      // that high or low ledger notes always have headroom. This is what keeps
+      // notes from colliding with the caption or with each other across rows.
+      const systems = [];
+      for (let i = 0; i < notes.length; i += perSystem) {
+        systems.push(notes.slice(i, i + perSystem));
+      }
 
+      const topPad = 24;
+      const minAbove = 28;       // clearance above the top staff line
+      const betweenSystems = 30;
+
+      const blocks = [];
+      let cursorY = topPad;
+      systems.forEach((systemNotes) => {
+        const steps = systemNotes.map((note) => staffStepForNote(note, clef));
+        const maxStep = Math.max(8, ...steps);
+        const minStep = Math.min(0, ...steps);
+        const above = (maxStep - 8) * half + minAbove;
+        const staffTop = cursorY + above;
+        const bottomY = staffTop + gap * 4;
+        // Labels sit on one row below the lowest possible note in this system.
+        const labelBaseline = bottomY + Math.max(40, (0 - minStep) * half + 24);
+        blocks.push({ systemNotes, steps, staffTop, bottomY, labelBaseline });
+        cursorY = labelBaseline + 16 + betweenSystems;
+      });
+
+      const height = Math.max(200, Math.round(cursorY - betweenSystems + 6));
+      notationSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      drawBackground(height);
+
+      let noteIndex = 0;
+      blocks.forEach(({ systemNotes, steps, staffTop, bottomY, labelBaseline }) => {
         for (let i = 0; i < 5; i += 1) {
           const y = staffTop + i * gap;
           notationSvg.appendChild(svgEl("line", {
-            x1: staffLeft,
-            y1: y,
-            x2: staffRight,
-            y2: y,
-            stroke: "#24312f",
-            "stroke-width": 1.55
+            x1: staffLeft, y1: y, x2: staffRight, y2: y,
+            stroke: "#24312f", "stroke-width": 1.55
           }));
         }
 
         notationSvg.appendChild(svgEl("line", {
-          x1: staffLeft,
-          y1: staffTop,
-          x2: staffLeft,
-          y2: bottomY,
-          stroke: "#24312f",
-          "stroke-width": 3
+          x1: staffLeft, y1: staffTop, x2: staffLeft, y2: bottomY,
+          stroke: "#24312f", "stroke-width": 3
         }));
 
         const clefText = svgEl("text", {
           x: 58,
-          y: staffTop + (clefBottomLines[toClef.value].letter === "G" ? 50 : 46),
-          fill: "#1d2b29",
-          "font-size": 74,
+          y: staffTop + (clefBottomLines[clef].letter === "G" ? 50 : 46),
+          fill: "#1d2b29", "font-size": 74,
           "font-family": "'Baskerville', 'Times New Roman', serif"
         });
-        clefText.textContent = clefGlyphs[toClef.value];
+        clefText.textContent = clefGlyphs[clef];
         notationSvg.appendChild(clefText);
 
         const spacing = Math.min(88, Math.max(64, 640 / Math.max(systemNotes.length, 1)));
-        const noteStartX = 170;
 
         systemNotes.forEach((note, localIndex) => {
           const x = noteStartX + localIndex * spacing;
-          const step = staffStepForNote(note, toClef.value);
-          const y = bottomY - step * (gap / 2);
+          const step = steps[localIndex];
+          const y = bottomY - step * half;
 
-          if (note.accidental) {
-            const accidentalText = svgEl("text", {
-              x: x - 22,
-              y: y + 6,
-              fill: "#1d2b29",
-              "font-size": 26,
-              "font-family": "'Baskerville', 'Times New Roman', serif"
-            });
-            accidentalText.textContent = note.accidental === "#" ? "\u266F" : "\u266D";
-            notationSvg.appendChild(accidentalText);
+          // Each note's marks live in a <g> so they fade in together, staggered.
+          const group = svgEl("g", { class: "note-mark" });
+          if (!reduceMotion) {
+            group.style.animationDelay = `${Math.min(noteIndex * 55, 1100)}ms`;
           }
-
-          const stemUp = y > staffTop + gap * 2;
-          notationSvg.appendChild(svgEl("ellipse", {
-            cx: x,
-            cy: y,
-            rx: 10,
-            ry: 7.5,
-            fill: "#1d2b29",
-            transform: `rotate(-18 ${x} ${y})`
-          }));
-
-          notationSvg.appendChild(svgEl("line", {
-            x1: stemUp ? x + 8 : x - 8,
-            y1: y,
-            x2: stemUp ? x + 8 : x - 8,
-            y2: stemUp ? y - 48 : y + 48,
-            stroke: "#1d2b29",
-            "stroke-width": 2
-          }));
 
           const minStep = Math.min(step, 0);
           const maxStep = Math.max(step, 8);
-
           for (let ledgerStep = minStep; ledgerStep <= maxStep; ledgerStep += 2) {
-            if (ledgerStep >= 0 && ledgerStep <= 8) {
-              continue;
-            }
-            const ledgerY = bottomY - ledgerStep * (gap / 2);
-            notationSvg.appendChild(svgEl("line", {
-              x1: x - 16,
-              y1: ledgerY,
-              x2: x + 16,
-              y2: ledgerY,
-              stroke: "#1d2b29",
-              "stroke-width": 1.8
+            if (ledgerStep >= 0 && ledgerStep <= 8) continue;
+            const ledgerY = bottomY - ledgerStep * half;
+            group.appendChild(svgEl("line", {
+              x1: x - 16, y1: ledgerY, x2: x + 16, y2: ledgerY,
+              stroke: "#1d2b29", "stroke-width": 1.8
             }));
           }
 
+          if (note.accidental) {
+            const accidentalText = svgEl("text", {
+              x: x - 22, y: y + 6, fill: "#1d2b29", "font-size": 26,
+              "font-family": "'Baskerville', 'Times New Roman', serif"
+            });
+            accidentalText.textContent = note.accidental === "#" ? "♯" : "♭";
+            group.appendChild(accidentalText);
+          }
+
+          const stemUp = y > staffTop + gap * 2;
+          group.appendChild(svgEl("line", {
+            x1: stemUp ? x + 8 : x - 8, y1: y,
+            x2: stemUp ? x + 8 : x - 8, y2: stemUp ? y - 48 : y + 48,
+            stroke: "#1d2b29", "stroke-width": 2
+          }));
+          group.appendChild(svgEl("ellipse", {
+            cx: x, cy: y, rx: 10, ry: 7.5, fill: "#1d2b29",
+            transform: `rotate(-18 ${x} ${y})`
+          }));
+
           const label = svgEl("text", {
-            x,
-            y: bottomY + 40,
-            fill: "#5f6d69",
-            "font-size": 14,
+            x, y: labelBaseline, fill: "#5f6d69", "font-size": 14,
             "font-family": "\"Avenir Next\", \"Segoe UI\", sans-serif",
             "text-anchor": "middle"
           });
           label.textContent = `${note.letter}${note.accidental}${note.octave}`;
-          notationSvg.appendChild(label);
+          group.appendChild(label);
+
+          notationSvg.appendChild(group);
+          noteIndex += 1;
         });
-      }
+      });
     }
 
     async function renderConversion() {
       const raw = noteInput.value.trim();
       if (!raw) {
-        conversionSummary.innerHTML = "<strong>Result</strong><p>Enter notes like A4 B4 C5</p>";
-        conversionDetails.innerHTML = "<strong>Converted Notes</strong><p>Same pitch in a different clef will appear here</p>";
-        conversionPositions.innerHTML = "<strong>Staff Positions</strong><p>Target clef staff positions will appear here</p>";
         generatedNotes.textContent = "No converted notes yet";
         generatedClef.textContent = `${toClef.value.charAt(0).toUpperCase()}${toClef.value.slice(1)} clef`;
         generatedPositions.innerHTML = "Enter notes and convert them";
@@ -1014,9 +1121,6 @@
       const invalid = notes.findIndex((note) => note === null);
 
       if (invalid !== -1) {
-        conversionSummary.innerHTML = "<strong>Result</strong><p>One or more notes could not be read</p>";
-        conversionDetails.innerHTML = `<strong>Converted Notes</strong><p>Use note names like A4 Bb3 F#5</p>`;
-        conversionPositions.innerHTML = `<strong>Staff Positions</strong><p>Problem note: ${tokens[invalid]}</p>`;
         generatedNotes.textContent = "Invalid note input";
         generatedClef.textContent = `${toClef.value.charAt(0).toUpperCase()}${toClef.value.slice(1)} clef`;
         generatedPositions.innerHTML = `Problem note: ${tokens[invalid]}`;
@@ -1028,15 +1132,13 @@
       }
 
       try {
+        setBusy(true);
         const payload = await generateScoreData(raw);
         const convertedNotes = payload.notes || [];
         const toPositions = payload.positions || [];
         currentMusicXml = payload.musicxml || "";
         currentStructuredNotes = convertedNotes.map(parseNoteToken).filter(Boolean);
 
-        conversionSummary.innerHTML = `<strong>Result</strong><p>${payload.note_count} note${payload.note_count === 1 ? "" : "s"} converted from ${fromClef.value} to ${toClef.value}</p>`;
-        conversionDetails.innerHTML = `<strong>Converted Notes</strong><p>${convertedNotes.join(" ") || "No notes generated"}</p>`;
-        conversionPositions.innerHTML = `<strong>Staff Positions</strong><p>${toPositions.join("<br>") || "No staff positions generated"}</p>`;
         generatedNotes.textContent = convertedNotes.join(" ") || "No converted notes yet";
         generatedClef.textContent = `${toClef.value.charAt(0).toUpperCase()}${toClef.value.slice(1)} clef`;
         generatedPositions.innerHTML = toPositions.join("<br>") || "No positions generated";
@@ -1048,6 +1150,8 @@
         currentStructuredNotes = notes;
         renderNotation(notes);
         setStatus("Structured score generation is available only when the local Clef Shift server is running");
+      } finally {
+        setBusy(false);
       }
     }
 
