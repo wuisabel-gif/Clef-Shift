@@ -12,6 +12,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from omr_pipeline import analyze_image
+from oemer_pipeline import analyze_image as oemer_analyze, oemer_available
 from score_pipeline import build_score_data, score_to_musicxml, staff_position
 
 
@@ -144,34 +145,57 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 ocr_target = rendered_path
                 mode = "pdf"
 
-            # Notes are read from the NOTATION by the OMR detector. OCR is used
-            # only to surface incidental text (title, tempo, markings) and is
-            # never the primary note source -- see the project handoff.
+            # Note reading priority:
+            #   1) oemer (ML OMR) -- reads pitch, octave, accidentals, key
+            #      signature and rhythm from real engraved scores.
+            #   2) the in-house heuristic detector -- fast, no deps, fallback.
+            #   3) plain OCR text -- last resort, clearly labelled so it is never
+            #      presented as notation read from a staff.
             raw_text, stderr_text = ocr_file(ocr_target)
 
-            debug_dir = ROOT / "debug"
-            result = analyze_image(ocr_target, source_clef, debug=True, debug_dir=debug_dir)
+            notes: list[str] = []
+            detection_mode = "none"
+            source_musicxml = ""
+            key_fifths = None
+            message = ""
+            heuristic = None
 
-            notes = result.notes
-            detection_mode = "music-notation" if result.success else "none"
+            if oemer_available():
+                omr = oemer_analyze(ocr_target)
+                if omr.get("notes"):
+                    notes = omr["notes"]
+                    detection_mode = "oemer-omr"
+                    source_musicxml = omr.get("musicxml", "")
+                    key_fifths = omr.get("key_fifths")
+                    message = f"Read {len(notes)} note(s) from the notation with oemer."
+                elif omr.get("error") and not warning:
+                    warning = omr["error"]
 
-            # Honest fallback: only when NO staff was found at all (e.g. a photo
-            # of typed note names) do we offer note-like tokens parsed from OCR,
-            # and we label them clearly so the UI does not present them as
-            # notation that was read from a staff.
-            if not notes and result.staff_count == 0:
-                ocr_notes = normalize_note_tokens(raw_text)
-                if ocr_notes:
-                    notes = ocr_notes
-                    detection_mode = "text-ocr-fallback"
+            if not notes:
+                heuristic = analyze_image(ocr_target, source_clef, debug=True, debug_dir=ROOT / "debug")
+                if heuristic.notes:
+                    notes = heuristic.notes
+                    detection_mode = "heuristic-detection"
+                    message = heuristic.reason
+                elif heuristic.staff_count == 0:
+                    # No staff at all (e.g. a photo of typed note names): offer
+                    # OCR tokens, clearly labelled as text rather than notation.
+                    ocr_notes = normalize_note_tokens(raw_text)
+                    if ocr_notes:
+                        notes = ocr_notes
+                        detection_mode = "text-ocr-fallback"
+                        message = (
+                            "No staff notation was found. The note names below were read "
+                            "from text in the image, not from musical notation."
+                        )
+                if not message:
+                    message = heuristic.reason
 
-            if detection_mode == "text-ocr-fallback":
+            if not message:
                 message = (
-                    "No staff notation was found. The note names below were read "
-                    "from text in the image, not from musical notation."
+                    f"Read {len(notes)} note(s)." if notes
+                    else "No notes could be read from this upload."
                 )
-            else:
-                message = result.reason
 
             payload = {
                 "file_name": upload_name,
@@ -179,14 +203,17 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 "raw_text": raw_text,
                 "notes": notes,
                 "detection_mode": detection_mode,
-                "detection_success": result.success,
-                "staff_count": result.staff_count,
-                "note_count": result.note_count,
-                "spacing": round(result.spacing, 2),
-                "debug_images": [os.path.relpath(p, ROOT) for p in result.debug_images],
+                "source_musicxml": source_musicxml,
+                "key_fifths": key_fifths,
                 "warning": warning or stderr_text,
                 "message": message,
             }
+            if heuristic is not None:
+                payload["detection_success"] = heuristic.success
+                payload["staff_count"] = heuristic.staff_count
+                payload["note_count"] = heuristic.note_count
+                payload["spacing"] = round(heuristic.spacing, 2)
+                payload["debug_images"] = [os.path.relpath(p, ROOT) for p in heuristic.debug_images]
             self.respond_json(payload)
 
     def handle_score_request(self) -> None:
