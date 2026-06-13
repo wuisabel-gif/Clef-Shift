@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clef Shift</title>
   <style>
+    @font-face {
+      font-family: "ALK Life";
+      src: url("/fonts/alk-life-webfont.ttf") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --bg: #f4ede0;
       --sidebar-bg: #eae0cd;
@@ -71,9 +79,10 @@
 
     h1 {
       margin: 14px 0 10px;
-      font-size: clamp(40px, 6vw, 64px);
+      font-family: "ALK Life", "Iowan Old Style", Georgia, serif;
+      font-size: clamp(52px, 7vw, 84px);
       line-height: 1.0;
-      letter-spacing: -0.04em;
+      letter-spacing: 0;
     }
 
     .lead {
