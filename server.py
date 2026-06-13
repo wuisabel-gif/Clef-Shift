@@ -160,15 +160,29 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
             key_fifths = None
             message = ""
             heuristic = None
+            omr: dict = {}
 
             if audiveris_available():
                 omr = audiveris_analyze(ocr_target)
+                # Surface the full decision path in the server log so it is
+                # always clear WHY a read was accepted or rejected.
+                conf = omr.get("confidence")
+                print(
+                    "[audiveris] accepted=%s confidence=%s notes=%d"
+                    % (omr.get("success"), conf, len(omr.get("notes") or [])),
+                    flush=True,
+                )
+                for c in omr.get("decision_path", []):
+                    print("  %s %-18s [%s] %s"
+                          % ("ok " if c["ok"] else "REJECT", c["check"], c["source"], c["detail"]),
+                          flush=True)
                 if omr.get("notes"):
                     notes = omr["notes"]
                     detection_mode = "audiveris-omr"
                     source_musicxml = omr.get("musicxml", "")
                     key_fifths = omr.get("key_fifths")
-                    message = f"Read {len(notes)} note(s) from the notation with Audiveris."
+                    pct = f" (confidence {round(conf * 100)}%)" if conf is not None else ""
+                    message = f"Read {len(notes)} note(s) from the notation with Audiveris{pct}."
                 elif omr.get("error") and not warning:
                     warning = omr["error"]
 
@@ -212,6 +226,10 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 "key_fifths": key_fifths,
                 "warning": warning or stderr_text,
                 "message": message,
+                # Audiveris read transparency (always included when it ran).
+                "audiveris_confidence": omr.get("confidence"),
+                "audiveris_decision": omr.get("decision_path", []),
+                "audiveris_rejected": bool(omr) and not omr.get("success") and bool(omr.get("decision_path")),
             }
             if heuristic is not None:
                 payload["detection_success"] = heuristic.success
