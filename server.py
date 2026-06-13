@@ -177,7 +177,10 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 if heuristic.notes:
                     notes = heuristic.notes
                     detection_mode = "heuristic-detection"
-                    message = heuristic.reason
+                    message = (
+                        f"Limited fallback detection: read {len(notes)} solid notehead(s). "
+                        "Sustained notes, accidentals, and rhythm need the Audiveris engine."
+                    )
                 elif heuristic.staff_count == 0:
                     # No staff at all (e.g. a photo of typed note names): offer
                     # OCR tokens, clearly labelled as text rather than notation.
@@ -204,6 +207,7 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 "raw_text": raw_text,
                 "notes": notes,
                 "detection_mode": detection_mode,
+                "fallback": detection_mode in ("heuristic-detection", "text-ocr-fallback"),
                 "source_musicxml": source_musicxml,
                 "key_fifths": key_fifths,
                 "warning": warning or stderr_text,

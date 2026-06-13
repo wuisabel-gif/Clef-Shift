@@ -76,6 +76,39 @@ HEADER_TALL = 3.5            # clef/brace gate: taller than this (spacing units)
 HEADER_WIDE = 2.0            # ... and wider than this. A stemmed note is tall
                              # but narrow, so this avoids skipping the 1st note.
 
+# --- metadata-zone exclusion (clef / key sig / time sig) ------------------
+# The leading clef+key+time block is read as a single contiguous cluster of
+# inked columns at the staff's left edge; the first real note begins after a
+# clear whitespace gap. Everything left of that gap is ignored, so accidentals
+# in the key signature and the time-signature digits can never become notes.
+HEADER_INK_MIN = 0.06        # column counts as inked if this fraction of the band is ink
+HEADER_GAP_INTRA = 1.20      # gaps smaller than this still belong to the header
+                             # (the clef->key-signature gap is ~1.1 spacings)
+HEADER_MAX = 16.0            # search this far right for the end of the header
+
+# --- barlines -------------------------------------------------------------
+BARLINE_SPAN = 0.82          # a barline column spans >= this fraction of staff height
+BARLINE_MAX_W = 0.45         # ... and is no wider than this (spacing units)
+
+# --- notehead evidence & confidence --------------------------------------
+NOTE_HEXT_MIN = 0.55         # min horizontal solid extent of the notehead body.
+                             # A real (hole-filled) notehead is ~1.2 spacings
+                             # wide here; a stem, or a thin digit/accidental
+                             # stroke, is far narrower and is rejected.
+NOTE_VEXT_MIN = 0.60         # min vertical solid extent. A notehead is ~1 space
+                             # tall; a beam is a thin (~0.5 space) bar, so this
+                             # rejects points that sit on a slanted beam.
+SCAN_STEP_MAX = 13           # highest pitch row scanned (~2.5 spaces above the
+                             # top line). Marks above this -- e.g. a tempo note
+                             # floating over the staff -- are never considered.
+ACCEPT_SCORE = 0.58          # confidence floor. Below this we emit NO note rather
+                             # than a guessed one (honest-failure requirement).
+TEMPO_ABOVE_STEPS = 10       # a mark this many diatonic steps above the bottom
+                             # line (>= ~1 space above the top line) ...
+TEMPO_ISOLATION = 3.0        # ... and isolated by more than this (spacing units)
+                             # from every other note is treated as a floating
+                             # tempo/metronome glyph, not a real note.
+
 
 @dataclass
 class StaffGroup:
@@ -94,6 +127,23 @@ class NoteCandidate:
     token: str
     fill: float
     has_stem: bool = False
+    score: float = 0.0
+    kind: str = ""           # "solid" | "open"
+
+
+@dataclass
+class RejectedMark:
+    x: float
+    y: float
+    reason: str
+
+
+@dataclass
+class StaffScan:
+    accepted: list[NoteCandidate]
+    rejected: list[RejectedMark]
+    content_start: float     # x where the note region begins (after metadata)
+    barlines: list[float]    # x positions of detected barlines
 
 
 @dataclass
@@ -123,19 +173,58 @@ def load_gray(image_path: Path) -> np.ndarray:
     return np.array(image, dtype=np.uint8)
 
 
-def adaptive_binarize(gray: np.ndarray) -> np.ndarray:
-    """Local-adaptive document threshold (robust to uneven lighting / scans).
+def otsu_threshold(gray: np.ndarray) -> int:
+    """Classic Otsu threshold (value maximizing inter-class variance)."""
+    hist = np.bincount(gray.ravel(), minlength=256).astype(np.float64)
+    total = float(gray.size)
+    levels = np.arange(256)
+    sum_total = float(np.dot(levels, hist))
+    w_b = np.cumsum(hist)
+    w_f = total - w_b
+    sum_b = np.cumsum(levels * hist)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean_b = np.where(w_b > 0, sum_b / w_b, 0.0)
+        mean_f = np.where(w_f > 0, (sum_total - sum_b) / w_f, 0.0)
+    between = w_b * w_f * (mean_b - mean_f) ** 2
+    between[(w_b == 0) | (w_f == 0)] = -1.0
+    return int(np.argmax(between))
 
-    A pixel is ink if it is meaningfully darker than its local neighborhood.
-    This is far more reliable on near-white pages than global Otsu, which
-    degenerates when ink is a tiny fraction of the image.
+
+def adaptive_binarize(gray: np.ndarray) -> np.ndarray:
+    """Binarize to ink=True, keeping thin lines AND solid shapes.
+
+    Union of two thresholds:
+      * a local-adaptive threshold (a pixel darker than its neighborhood) keeps
+        thin staff lines and faint marks that a global threshold would drop;
+      * a global Otsu threshold marks genuinely dark pixels, which fills the
+        *interior* of solid noteheads -- the local threshold alone returns only
+        their outline (and a blurry, broken outline at that on upscaled scans).
+    Downstream, ``solidify_noteheads`` hole-fills the staff-removed image to
+    close any remaining gaps and to turn open half/whole heads into blobs.
     """
     g = gray.astype(np.float32)
     window = int(round(min(gray.shape) * 0.025))
     window += (window + 1) % 2  # force odd
     window = max(window, 15)
     local = ndimage.uniform_filter(g, size=window)
-    return g < (local - ADAPTIVE_OFFSET)
+    adaptive = g < (local - ADAPTIVE_OFFSET)
+
+    thresh = otsu_threshold(gray)
+    solid = gray <= thresh
+    if solid.mean() > 0.5:  # guard against an all-dark / inverted scan
+        solid = np.zeros_like(adaptive)
+    return adaptive | solid
+
+
+def solidify_noteheads(staff_removed: np.ndarray) -> np.ndarray:
+    """Fill enclosed holes so notehead outlines become solid blobs.
+
+    Run on the staff-line-removed image: with the long horizontal lines gone,
+    the only enclosed regions left are inside note glyphs, so this solidifies
+    both filled noteheads (whose adaptive-threshold outline was hollow) and open
+    half/whole noteheads -- without flooding whole measures.
+    """
+    return ndimage.binary_fill_holes(staff_removed)
 
 
 # --- staff detection ------------------------------------------------------
@@ -433,6 +522,146 @@ def note_token_from_step(step: int, staff: StaffGroup, source_clef: str) -> tupl
     return f"{STEP_NAMES[step_index]}{octave}", octave
 
 
+def staff_band_bounds(staff: StaffGroup, image_h: int, pad: float = 1.2) -> tuple[int, int]:
+    s = staff.spacing
+    top = max(0, int(round(staff.lines[0] - pad * s)))
+    bottom = min(image_h, int(round(staff.lines[-1] + pad * s)))
+    return top, bottom
+
+
+def find_content_start(staff_removed: np.ndarray, staff: StaffGroup) -> float:
+    """X where the note region begins, just past the clef+key+time header.
+
+    The header is the run of inked columns starting at the staff's left edge.
+    Small gaps *between* the clef, the key-signature accidentals and the time
+    signature are tolerated (< HEADER_GAP_INTRA); the header ends at the first
+    wider gap, which is the whitespace before the first note. Everything left of
+    that is the metadata zone and is never scanned for notes.
+    """
+    s = staff.spacing
+    top, bottom = staff_band_bounds(staff, staff_removed.shape[0])
+    left = int(round(staff.x_start))
+    right = min(staff_removed.shape[1], int(round(staff.x_start + HEADER_MAX * s)))
+    if right <= left or bottom <= top:
+        return staff.x_start
+
+    col = staff_removed[top:bottom, left:right].mean(axis=0)
+    inked = col >= HEADER_INK_MIN
+    intra = max(1, int(round(HEADER_GAP_INTRA * s)))
+
+    n = col.shape[0]
+    i = 0
+    while i < n and not inked[i]:
+        i += 1
+    if i >= n:
+        return staff.x_start  # no leading ink -> no header to skip
+
+    end = i
+    while i < n:
+        if inked[i]:
+            end = i
+            i += 1
+            continue
+        j = i
+        while j < n and not inked[j]:
+            j += 1
+        if (j - i) > intra:
+            # Whitespace ends the header. The first thing with ink inside the
+            # staff band after this gap is the first real note -- anything in
+            # the gap that floats *above* the band (a tempo mark) produces no
+            # band ink and is therefore skipped. Start scanning from there.
+            if j < n:
+                return float(left + j)
+            break
+        i = j
+    return float(left + end + int(round(0.4 * s)))
+
+
+def find_barlines(binary: np.ndarray, staff: StaffGroup) -> list[float]:
+    """Detect barlines: thin columns of ink spanning most of the staff height."""
+    s = staff.spacing
+    top = max(0, int(round(staff.lines[0])))
+    bottom = min(binary.shape[0], int(round(staff.lines[-1])) + 1)
+    if bottom <= top:
+        return []
+    col_frac = binary[top:bottom].mean(axis=0)
+    cols = np.where(col_frac >= BARLINE_SPAN)[0]
+    left, right = staff.x_start, staff.x_end
+    max_w = max(1, int(round(BARLINE_MAX_W * s)))
+    bars: list[float] = []
+    for group in group_consecutive(cols.tolist()):
+        if not group:
+            continue
+        cx = (group[0] + group[-1]) / 2.0
+        if (group[-1] - group[0] + 1) <= max_w and left <= cx <= right:
+            bars.append(float(cx))
+    return bars
+
+
+def vertical_solid_extent(staff_removed: np.ndarray, cx: float, cy: float, spacing: float) -> float:
+    """Height of the contiguous solid-ink band through the column at ``cx``.
+
+    Round noteheads span about one staff space here; time-signature digits,
+    flats and naturals are tall vertical strokes and span much more.
+    """
+    half = max(1, int(round(0.18 * spacing)))
+    cyi, cxi = int(round(cy)), int(round(cx))
+    x0, x1 = max(0, cxi - half), min(staff_removed.shape[1], cxi + half + 1)
+    strip = staff_removed[:, x0:x1]
+    if strip.size == 0:
+        return 0.0
+    row_frac = strip.mean(axis=1)
+    h = row_frac.shape[0]
+    if cyi < 0 or cyi >= h or row_frac[cyi] < 0.5:
+        return 0.0
+    top = cyi
+    while top > 0 and row_frac[top - 1] >= 0.55:
+        top -= 1
+    bottom = cyi
+    while bottom < h - 1 and row_frac[bottom + 1] >= 0.55:
+        bottom += 1
+    return float(bottom - top + 1)
+
+
+def score_notehead(
+    staff_removed: np.ndarray, integral: np.ndarray,
+    cx: float, cy: float, spacing: float,
+    half_h: int, half_w: int, core_h: int, core_w: int,
+) -> tuple[float, str, str]:
+    """Confidence that (cx, cy) is a real notehead.
+
+    Returns (score in [0,1], kind, reject_reason). Combines fill, the
+    solid-vs-open core pattern, compact round shape, and a stem bonus. Metadata
+    glyphs (clef fragments, flats, naturals, time-signature digits) fail the
+    shape gates or the fill pattern and score 0 with a reason.
+    """
+    fill = window_fill(integral, int(round(cy)), int(round(cx)), half_h, half_w)
+    core = window_fill(integral, int(round(cy)), int(round(cx)), core_h, core_w)
+    hext = horizontal_solid_extent(staff_removed, cx, cy, spacing)
+    vext = vertical_solid_extent(staff_removed, cx, cy, spacing)
+
+    # Shape gates. A notehead is a compact blob: wide enough to not be a stem,
+    # narrow enough to not be a beam/bar, and tall enough to not be sitting on a
+    # thin (slanted) beam.
+    if hext > BEAM_MAX_W * spacing:
+        return 0.0, "", "wide bar/beam"
+    if hext < NOTE_HEXT_MIN * spacing:
+        return 0.0, "", "thin stroke (stem/accidental)"
+    if vext < NOTE_VEXT_MIN * spacing:
+        return 0.0, "", "thin bar (beam)"
+
+    stem = has_stem(staff_removed, cx, cy, spacing)
+
+    # Solid noteheads only. Hole-filling makes a filled head dense at the core;
+    # open (half/whole) heads stay hollow and are intentionally NOT accepted
+    # here -- reading them (and accidentals and rhythm) is the Audiveris path's
+    # job. The fallback's contract is high-confidence solid heads or nothing.
+    if core >= CORE_MIN and FILL_MIN <= fill <= FILL_MAX:
+        return min(0.70 + (0.15 if stem else 0.0), 1.0), "solid", ""
+
+    return 0.0, "", "weak/ambiguous fill (not a solid head)"
+
+
 def detect_notes_in_staff(
     staff_removed: np.ndarray,
     binary: np.ndarray,
@@ -440,21 +669,37 @@ def detect_notes_in_staff(
     staff_index: int,
     source_clef: str,
     raw_candidates: list[tuple[float, float]],
-) -> list[NoteCandidate]:
-    """Scan one staff for noteheads at discrete staff positions."""
+) -> StaffScan:
+    """Scan one staff for noteheads, excluding the metadata zone.
+
+    Honest by construction: a candidate becomes a note only if its notehead
+    confidence clears ACCEPT_SCORE. Anything weaker is recorded as a rejection
+    (for debug) but never emitted, so the fallback returns no notes rather than
+    guesses.
+    """
     s = staff.spacing
     half_h = max(2, int(round(NOTEHEAD_H * s / 2)))
     half_w = max(3, int(round(NOTEHEAD_W * s / 2)))
+    core_h = max(1, int(round(CORE_H * s)))
+    core_w = max(1, int(round(CORE_W * s)))
     integral = integral_image(staff_removed)
     bottom_line = staff.lines[-1]
 
-    left = max(int(round(header_skip_x(staff_removed, staff))), int(round(staff.x_start)))
+    barlines = find_barlines(binary, staff)
+    # The note region starts after the clef+key+time metadata block.
+    content_start = max(
+        find_content_start(staff_removed, staff),
+        header_skip_x(staff_removed, staff),
+        staff.x_start,
+    )
+    left = int(round(content_start))
     right = int(round(staff.x_end))
 
-    # Candidate scan: for each pitch row (half-spacing steps from a couple
-    # ledger lines below to several above), slide the notehead window in x.
+    # Candidate scan: at each pitch row, slide the notehead window in x. The
+    # fill bar is intentionally loose here (open heads are faint); the scoring
+    # step below is what actually decides.
     candidates: list[NoteCandidate] = []
-    for step in range(-5, 18):
+    for step in range(-5, SCAN_STEP_MAX + 1):
         cy = bottom_line - step * (s / 2.0)
         cyi = int(round(cy))
         if cyi < 0 or cyi >= staff_removed.shape[0]:
@@ -463,19 +708,15 @@ def detect_notes_in_staff(
         step_x = max(1, half_w // 2)
         while x <= right:
             fill = window_fill(integral, cyi, x, half_h, half_w)
-            if FILL_MIN <= fill <= FILL_MAX:
+            if fill >= 0.22:
                 raw_candidates.append((float(x), cy))
                 candidates.append(
-                    NoteCandidate(
-                        x=float(x), y=cy, staff_index=staff_index, step=step,
-                        token="", fill=fill,
-                    )
+                    NoteCandidate(x=float(x), y=cy, staff_index=staff_index,
+                                  step=step, token="", fill=fill)
                 )
             x += step_x
 
-    # Non-max suppression: collapse the many overlapping hits (a real notehead
-    # fires at several adjacent x offsets and pitch rows) down to one per note,
-    # keeping the highest-fill hit -> best-aligned pitch row.
+    # Non-max suppression: collapse overlapping hits to one per note.
     candidates.sort(key=lambda c: c.fill, reverse=True)
     kept: list[NoteCandidate] = []
     for cand in candidates:
@@ -486,27 +727,47 @@ def detect_notes_in_staff(
             continue
         kept.append(cand)
 
-    # Core + stem gates. Core fill rejects hollow glyphs (sharps, naturals,
-    # flats, the time-signature C) that pass the looser window-fill test. The
-    # stem gate rejects remaining stray marks; real notes here carry a stem.
-    core_h = max(1, int(round(CORE_H * s)))
-    core_w = max(1, int(round(CORE_W * s)))
     accepted: list[NoteCandidate] = []
+    rejected: list[RejectedMark] = []
     for cand in kept:
-        core = window_fill(integral, int(round(cand.y)), int(round(cand.x)), core_h, core_w)
-        if core < CORE_MIN:
-            continue
-        if horizontal_solid_extent(staff_removed, cand.x, cand.y, s) > BEAM_MAX_W * s:
-            continue
-        if not has_stem(staff_removed, cand.x, cand.y, s):
-            continue
-        cand.has_stem = True
-        token, _octave = note_token_from_step(cand.step, staff, source_clef)
-        cand.token = token
-        accepted.append(cand)
+        score, kind, reason = score_notehead(
+            staff_removed, integral, cand.x, cand.y, s, half_h, half_w, core_h, core_w
+        )
+        if score >= ACCEPT_SCORE:
+            cand.score = score
+            cand.kind = kind
+            cand.has_stem = has_stem(staff_removed, cand.x, cand.y, s)
+            cand.token, _ = note_token_from_step(cand.step, staff, source_clef)
+            accepted.append(cand)
+        elif reason and cand.fill >= 0.30:
+            rejected.append(RejectedMark(x=cand.x, y=cand.y, reason=reason))
+
+    # Drop isolated marks floating high above the staff. A real high note in a
+    # phrase has neighbours close by; a tempo/metronome glyph (the note in
+    # "q = 101") sits alone, well above the staff -- so loneliness + height is a
+    # reliable tell that lets us honour "ignore the tempo-marking zone".
+    kept_notes: list[NoteCandidate] = []
+    for c in accepted:
+        if c.step >= TEMPO_ABOVE_STEPS:
+            # A real high note belongs to the phrase: some other note sits close
+            # in BOTH x and pitch. A tempo glyph floats alone -- it may share an
+            # x with the first note but is many steps higher -- so it has no such
+            # neighbour and is dropped.
+            supported = any(
+                o is not c
+                and abs(c.x - o.x) <= TEMPO_ISOLATION * s
+                and abs(c.step - o.step) <= 4
+                for o in accepted
+            )
+            if not supported:
+                rejected.append(RejectedMark(c.x, c.y, "isolated high mark (tempo?)"))
+                continue
+        kept_notes.append(c)
+    accepted = kept_notes
 
     accepted.sort(key=lambda c: c.x)
-    return accepted
+    return StaffScan(accepted=accepted, rejected=rejected,
+                     content_start=content_start, barlines=barlines)
 
 
 # --- debug rendering ------------------------------------------------------
@@ -522,9 +783,13 @@ def write_debug_images(
     staves: list[StaffGroup],
     raw_candidates: list[tuple[float, float]],
     accepted: list[NoteCandidate],
+    scans: list["StaffScan"],
 ) -> list[str]:
     debug_dir.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
+
+    def band(staff: StaffGroup) -> tuple[float, float]:
+        return staff.lines[0] - staff.spacing * 4, staff.lines[-1] + staff.spacing * 4
 
     # 01 threshold
     thr = Image.fromarray(np.where(binary, 0, 255).astype(np.uint8)).convert("RGB")
@@ -532,15 +797,27 @@ def write_debug_images(
     thr.save(p)
     written.append(str(p))
 
-    # 02 staff overlay
+    # 02 staff overlay + ignored metadata region (gray) + barlines (blue)
     img = _to_rgb(gray)
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    odraw = ImageDraw.Draw(overlay)
     draw = ImageDraw.Draw(img)
-    for staff in staves:
+    for staff, scan in zip(staves, scans):
+        top, bottom = band(staff)
         for line in staff.lines:
             draw.line([(staff.x_start, line), (staff.x_end, line)], fill=(220, 30, 30), width=1)
-        top = staff.lines[0] - staff.spacing * 4
-        bottom = staff.lines[-1] + staff.spacing * 4
         draw.rectangle([staff.x_start, top, staff.x_end, bottom], outline=(30, 140, 30))
+        # shaded ignored metadata zone
+        odraw.rectangle([staff.x_start, top, scan.content_start, bottom], fill=(90, 90, 90, 110))
+        draw.line([(scan.content_start, top), (scan.content_start, bottom)], fill=(150, 90, 200), width=2)
+        # barlines; mark the first one after the metadata distinctly
+        future = [b for b in scan.barlines if b >= scan.content_start]
+        first_bar = min(future) if future else None
+        for b in scan.barlines:
+            color = (20, 90, 230) if b == first_bar else (120, 160, 220)
+            w = 3 if b == first_bar else 1
+            draw.line([(b, top), (b, bottom)], fill=color, width=w)
+    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
     p = debug_dir / "02_staff_overlay.png"
     img.save(p)
     written.append(str(p))
@@ -554,16 +831,19 @@ def write_debug_images(
     img.save(p)
     written.append(str(p))
 
-    # 04 accepted notes
+    # 04 accepted (green) + rejected accidentals/symbols (red x)
     img = _to_rgb(gray)
     draw = ImageDraw.Draw(img)
+    for scan in scans:
+        for rej in scan.rejected:
+            x, y = rej.x, rej.y
+            draw.line([(x - 5, y - 5), (x + 5, y + 5)], fill=(220, 40, 40), width=2)
+            draw.line([(x - 5, y + 5), (x + 5, y - 5)], fill=(220, 40, 40), width=2)
     for note in accepted:
         r = 6
-        draw.ellipse(
-            [note.x - r, note.y - r, note.x + r, note.y + r],
-            outline=(20, 110, 220), width=2,
-        )
-        draw.text((note.x - 6, note.y - 22), note.token, fill=(20, 110, 220))
+        color = (20, 150, 60) if note.kind == "solid" else (20, 110, 220)
+        draw.ellipse([note.x - r, note.y - r, note.x + r, note.y + r], outline=color, width=2)
+        draw.text((note.x - 6, note.y - 22), note.token, fill=color)
     p = debug_dir / "04_accepted_notes.png"
     img.save(p)
     written.append(str(p))
@@ -616,26 +896,35 @@ def analyze_image(
             ),
             notes=[], staff_count=0, note_count=0, spacing=spacing, detail=detail,
         )
-        _maybe_write_debug(debug, debug_dir, image_path, gray, binary, staves, [], [], result)
+        _maybe_write_debug(debug, debug_dir, image_path, gray, binary, staves, [], [], [], result)
         return result
 
-    staff_removed = remove_staff_lines(binary, staves)
+    staff_removed = solidify_noteheads(remove_staff_lines(binary, staves))
     raw_candidates: list[tuple[float, float]] = []
-    accepted: list[NoteCandidate] = []
+    scans: list[StaffScan] = []
     for idx, staff in enumerate(staves):
-        accepted.extend(
+        scans.append(
             detect_notes_in_staff(
                 staff_removed, binary, staff, idx, source_clef, raw_candidates
             )
         )
 
+    accepted: list[NoteCandidate] = [c for sc in scans for c in sc.accepted]
+    rejected: list[RejectedMark] = [r for sc in scans for r in sc.rejected]
     accepted.sort(key=lambda c: (c.staff_index, c.x))
     notes = [c.token for c in accepted]
     detail["raw_candidate_count"] = len(raw_candidates)
+    detail["rejected_count"] = len(rejected)
+    detail["metadata_x"] = [round(sc.content_start, 1) for sc in scans]
+    detail["barlines"] = [[round(b, 1) for b in sc.barlines] for sc in scans]
     detail["accepted_notes"] = [
         {"staff": c.staff_index, "x": round(c.x, 1), "y": round(c.y, 1),
-         "token": c.token, "fill": round(c.fill, 3)}
+         "token": c.token, "fill": round(c.fill, 3),
+         "kind": c.kind, "score": round(c.score, 2)}
         for c in accepted
+    ]
+    detail["rejected_marks"] = [
+        {"x": round(r.x, 1), "y": round(r.y, 1), "reason": r.reason} for r in rejected
     ]
 
     if not notes:
@@ -649,7 +938,7 @@ def analyze_image(
             detail=detail,
         )
         _maybe_write_debug(
-            debug, debug_dir, image_path, gray, binary, staves, raw_candidates, accepted, result
+            debug, debug_dir, image_path, gray, binary, staves, raw_candidates, accepted, scans, result
         )
         return result
 
@@ -660,7 +949,7 @@ def analyze_image(
         detail=detail,
     )
     _maybe_write_debug(
-        debug, debug_dir, image_path, gray, binary, staves, raw_candidates, accepted, result
+        debug, debug_dir, image_path, gray, binary, staves, raw_candidates, accepted, scans, result
     )
     return result
 
@@ -674,13 +963,14 @@ def _maybe_write_debug(
     staves: list[StaffGroup],
     raw_candidates: list[tuple[float, float]],
     accepted: list[NoteCandidate],
+    scans: list[StaffScan],
     result: DetectionResult,
 ) -> None:
     if not debug:
         return
     target = Path(debug_dir) if debug_dir else Path(image_path).resolve().parent / "debug"
     try:
-        images = write_debug_images(target, gray, binary, staves, raw_candidates, accepted)
+        images = write_debug_images(target, gray, binary, staves, raw_candidates, accepted, scans)
         report = {
             "success": result.success,
             "reason": result.reason,
