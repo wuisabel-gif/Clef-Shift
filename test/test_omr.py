@@ -115,8 +115,46 @@ def main() -> int:
     passed &= check("multi.png two staves, finds notes", r.staff_count == 2 and len(r.notes) >= 18,
                     f"{len(r.notes)} notes, {r.staff_count} staves")
 
+    print("Audiveris confidence gate: trust coherent reads, reject garbage")
+    passed &= test_confidence_gate()
+
     print("\nRESULT:", "ALL PASS" if passed else "FAILURES")
     return 0 if passed else 1
+
+
+def test_confidence_gate() -> bool:
+    """Unit-test the Audiveris read sanity check (no engine/image needed)."""
+    from audiveris_pipeline import assess_confidence
+
+    # Two coherent 4/4 measures that add up -> trusted.
+    good_xml = """<score-partwise><part>
+    <measure number="1">
+      <attributes><divisions>1</divisions>
+        <time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>A</step><alter>-1</alter><octave>4</octave></pitch><duration>1</duration></note>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration></note>
+      <note><pitch><step>E</step><alter>-1</alter><octave>5</octave></pitch><duration>1</duration></note>
+      <note><pitch><step>D</step><alter>-1</alter><octave>5</octave></pitch><duration>1</duration></note>
+    </measure>
+    <measure number="2">
+      <note><pitch><step>E</step><alter>-1</alter><octave>5</octave></pitch><duration>4</duration></note>
+    </measure></part></score-partwise>"""
+    # Same notes, but both measures are badly over-filled (durations don't add up).
+    bad_xml = good_xml.replace("<duration>1</duration>", "<duration>8</duration>") \
+                      .replace("<duration>4</duration>", "<duration>9</duration>")
+
+    ok = True
+    a, _ = assess_confidence(good_xml, ["Ab4", "C5", "Eb5", "Db5", "Eb5"])
+    ok &= check("trusts a coherent read", a)
+    b, why = assess_confidence("", ["C5"])
+    ok &= check("rejects too-few notes", not b, why)
+    b, why = assess_confidence("", ["C5", "C12", "C5"])
+    ok &= check("rejects out-of-range notes", not b, why)
+    b, why = assess_confidence("", ["C2", "C7", "C2", "C7"])
+    ok &= check("rejects erratic leaps (scattered)", not b, why)
+    b, why = assess_confidence(bad_xml, ["Ab4", "C5", "Eb5", "Db5", "Eb5"])
+    ok &= check("rejects measures that don't add up", not b, why)
+    return ok
 
 
 if __name__ == "__main__":
