@@ -143,17 +143,28 @@ def test_confidence_gate() -> bool:
     bad_xml = good_xml.replace("<duration>1</duration>", "<duration>8</duration>") \
                       .replace("<duration>4</duration>", "<duration>9</duration>")
 
+    notes = ["Ab4", "C5", "Eb5", "Db5", "Eb5"]
+    strong_grades = {"head_count": 5, "mean_ctx": 0.88, "min_ctx": 0.66,
+                     "heads": [{"ctx": 0.94}, {"ctx": 0.85}, {"ctx": 0.93}, {"ctx": 0.92}, {"ctx": 0.66}]}
+    weak_grades = {"head_count": 5, "mean_ctx": 0.31, "min_ctx": 0.12,
+                   "heads": [{"ctx": 0.2}, {"ctx": 0.1}, {"ctx": 0.5}, {"ctx": 0.3}, {"ctx": 0.4}]}
+
     ok = True
-    a, _ = assess_confidence(good_xml, ["Ab4", "C5", "Eb5", "Db5", "Eb5"])
-    ok &= check("trusts a coherent read", a)
-    b, why = assess_confidence("", ["C5"])
+    a, _, _ = assess_confidence(good_xml, notes, strong_grades)
+    ok &= check("trusts a coherent, high-grade read", a)
+    b, why, _ = assess_confidence("", ["C5"])
     ok &= check("rejects too-few notes", not b, why)
-    b, why = assess_confidence("", ["C5", "C12", "C5"])
+    b, why, _ = assess_confidence("", ["C5", "C12", "C5"])
     ok &= check("rejects out-of-range notes", not b, why)
-    b, why = assess_confidence("", ["C2", "C7", "C2", "C7"])
+    b, why, _ = assess_confidence("", ["C2", "C7", "C2", "C7"])
     ok &= check("rejects erratic leaps (scattered)", not b, why)
-    b, why = assess_confidence(bad_xml, ["Ab4", "C5", "Eb5", "Db5", "Eb5"])
+    b, why, _ = assess_confidence(bad_xml, notes)
     ok &= check("rejects measures that don't add up", not b, why)
+    b, why, path = assess_confidence(good_xml, notes, weak_grades)
+    ok &= check("rejects low Audiveris grades", not b, why)
+    # decision path must name the source of the rejection
+    ok &= check("decision path attributes the failure", any(
+        (not c["ok"]) and c["source"] == "audiveris" for c in path), str([c["check"] for c in path]))
     return ok
 
 

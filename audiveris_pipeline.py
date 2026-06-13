@@ -37,6 +37,62 @@ WILD_JUMP_SEMITONES = 24    # a leap larger than two octaves between adjacent no
 WILD_JUMP_FRACTION = 0.5    # ... this fraction of leaps being wild = scattered
 MEASURE_BAD_FRACTION = 0.5  # ... this fraction of measures not adding up = garbage
 
+# Audiveris assigns every recognised symbol a contextual grade (0..1) in its
+# .omr project file. On a clean read, noteheads score ~0.85-0.94 (open heads a
+# bit lower). A misread that the classifier was unsure about scores low, so the
+# mean head grade is the strongest "is this trustworthy" signal we have.
+# Thresholds are deliberately lenient (clean reads sit well above them) and the
+# numbers are surfaced so they can be tightened once a real garbage read is in
+# hand.
+CTX_MEAN_MIN = 0.55         # reject if the mean notehead contextual grade is below this
+GRADE_HEAD_FLOOR = 0.35     # a notehead grade below this counts as "weak"
+GRADE_WEAK_FRACTION = 0.5   # reject if more than this fraction of heads are weak
+
+
+def parse_omr_grades(omr_path: Path) -> Optional[dict]:
+    """Read per-notehead recognition grades from an Audiveris .omr project file.
+
+    The .omr is a zip of sheet#N.xml files; each recognised notehead is a
+    ``<head ... grade=".." ctx-grade=".." shape=".." pitch="..">`` element.
+    Returns aggregate + per-head grades, or None if the file can't be read.
+    """
+    heads: list[dict] = []
+    try:
+        with zipfile.ZipFile(omr_path) as archive:
+            sheets = [n for n in archive.namelist() if n.endswith(".xml") and "sheet#" in n]
+            for name in sheets:
+                data = archive.read(name).decode("utf-8", errors="ignore")
+                for tag in re.findall(r"<head\b[^>]*>", data):
+                    g = re.search(r'\bgrade="([0-9.]+)"', tag)
+                    if not g:
+                        continue
+                    c = re.search(r'\bctx-grade="([0-9.]+)"', tag)
+                    sh = re.search(r'\bshape="([A-Z_]+)"', tag)
+                    p = re.search(r'\bpitch="(-?\d+)"', tag)
+                    grade = float(g.group(1))
+                    heads.append({
+                        "shape": sh.group(1) if sh else "",
+                        "grade": grade,
+                        "ctx": float(c.group(1)) if c else grade,
+                        "pitch": int(p.group(1)) if p else None,
+                    })
+    except (zipfile.BadZipFile, OSError):
+        return None
+
+    if not heads:
+        return {"head_count": 0, "heads": [], "mean_grade": 0.0, "min_grade": 0.0,
+                "mean_ctx": 0.0, "min_ctx": 0.0}
+    grades = [h["grade"] for h in heads]
+    ctxs = [h["ctx"] for h in heads]
+    return {
+        "head_count": len(heads),
+        "heads": heads,
+        "mean_grade": round(sum(grades) / len(grades), 3),
+        "min_grade": round(min(grades), 3),
+        "mean_ctx": round(sum(ctxs) / len(ctxs), 3),
+        "min_ctx": round(min(ctxs), 3),
+    }
+
 _TOKEN_RE = re.compile(r"^([A-G])([#b]?)(-?\d+)$")
 _STEP_SEMI = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
@@ -93,20 +149,51 @@ def _measure_coherence(xml_text: str) -> tuple[int, int]:
     return bad, total
 
 
-def assess_confidence(xml_text: str, tokens: list[str]) -> tuple[bool, str]:
-    """Decide whether an Audiveris read is trustworthy. (ok, reason_if_not)."""
-    if len(tokens) < MIN_NOTES:
-        return False, f"only {len(tokens)} note(s) read"
+def assess_confidence(
+    xml_text: str, tokens: list[str], grades: Optional[dict] = None
+) -> tuple[bool, str, list[dict]]:
+    """Decide whether an Audiveris read is trustworthy.
+
+    Returns (ok, reason_if_not, decision_path). The decision_path lists every
+    check with its result and a human-readable detail, so callers can show
+    exactly why a read was accepted or rejected and whether the rejection came
+    from the MusicXML measure math, the Audiveris grades, or the token sanity
+    checks.
+    """
+    checks: list[dict] = []
+
+    def record(name: str, ok: bool, detail: str, source: str) -> None:
+        checks.append({"check": name, "ok": bool(ok), "detail": detail, "source": source})
+
     midis = [_midi(t) for t in tokens]
-    if any(m is None or m < MIDI_LOW or m > MIDI_HIGH for m in midis):
-        return False, "notes fall outside a plausible pitch range"
-    jumps = [abs(midis[i + 1] - midis[i]) for i in range(len(midis) - 1)]
-    if jumps and sum(j > WILD_JUMP_SEMITONES for j in jumps) / len(jumps) >= WILD_JUMP_FRACTION:
-        return False, "notes jump erratically (incoherent line)"
+
+    record("note_count", len(tokens) >= MIN_NOTES, f"{len(tokens)} note(s)", "tokens")
+
+    in_range = bool(midis) and all(m is not None and MIDI_LOW <= m <= MIDI_HIGH for m in midis)
+    record("pitch_range", in_range, "all within A0–C8" if in_range else "a note is out of range", "tokens")
+
+    valid = [m for m in midis if m is not None]
+    jumps = [abs(valid[i + 1] - valid[i]) for i in range(len(valid) - 1)]
+    wild = (sum(j > WILD_JUMP_SEMITONES for j in jumps) / len(jumps)) if jumps else 0.0
+    record("erratic_leaps", wild < WILD_JUMP_FRACTION, f"{round(wild * 100)}% of steps leap >2 octaves", "tokens")
+
     bad, total = _measure_coherence(xml_text)
-    if total >= 2 and bad / total > MEASURE_BAD_FRACTION:
-        return False, "measures do not add up to the time signature"
-    return True, ""
+    meas_ok = not (total >= 2 and bad / total > MEASURE_BAD_FRACTION)
+    record("measure_arithmetic", meas_ok, f"{bad}/{total} measures don't add up", "musicxml")
+
+    if grades and grades.get("head_count", 0) > 0:
+        mean_ctx = grades["mean_ctx"]
+        weak_frac = sum(1 for h in grades["heads"] if h["ctx"] < GRADE_HEAD_FLOOR) / grades["head_count"]
+        grades_ok = mean_ctx >= CTX_MEAN_MIN and weak_frac <= GRADE_WEAK_FRACTION
+        record("audiveris_grades", grades_ok,
+               f"mean ctx-grade {mean_ctx:.2f} (min {grades['min_ctx']:.2f}), "
+               f"{round(weak_frac * 100)}% of heads below {GRADE_HEAD_FLOOR}", "audiveris")
+    else:
+        record("audiveris_grades", True, "no .omr grade data available", "audiveris")
+
+    failed = [c for c in checks if not c["ok"]]
+    reason = "; ".join(f'{c["check"]} [{c["source"]}]: {c["detail"]}' for c in failed)
+    return (not failed), reason, checks
 
 # Launcher produced by `gradlew :app:installDist`. The Audiveris checkout lives
 # beside the project (it is vendor code, kept out of this repo). Override with
@@ -147,10 +234,14 @@ def _extract_musicxml(out_dir: Path) -> Optional[str]:
     return None
 
 
-def run_audiveris(image_path: Path, timeout: int = 300) -> tuple[Optional[str], str]:
-    """Run Audiveris in batch/export mode and return (musicxml_text, error)."""
+def run_audiveris(image_path: Path, timeout: int = 300) -> tuple[Optional[str], Optional[dict], str]:
+    """Run Audiveris in batch/export mode.
+
+    Returns (musicxml_text, grade_info, error). grade_info is parsed from the
+    .omr project file (per-notehead recognition grades) when available.
+    """
     if not audiveris_available():
-        return None, "Audiveris is not installed"
+        return None, None, "Audiveris is not installed"
 
     env = dict(os.environ)
     if AUDIVERIS_JAVA_HOME:
@@ -167,14 +258,19 @@ def run_audiveris(image_path: Path, timeout: int = 300) -> tuple[Optional[str], 
                 env=env,
             )
         except subprocess.TimeoutExpired:
-            return None, "Audiveris timed out while reading the score"
+            return None, None, "Audiveris timed out while reading the score"
+
+        grades = None
+        omr_files = sorted(out_dir.rglob("*.omr"))
+        if omr_files:
+            grades = parse_omr_grades(omr_files[0])
 
         xml_text = _extract_musicxml(out_dir)
         if not xml_text:
             detail = (result.stderr or result.stdout or "").strip().splitlines()
             tail = detail[-1] if detail else "Audiveris produced no MusicXML"
-            return None, f"Audiveris failed: {tail}"
-        return xml_text, ""
+            return None, grades, f"Audiveris failed: {tail}"
+        return xml_text, grades, ""
 
 
 def analyze_image(image_path: Path, timeout: int = 300) -> dict:
@@ -183,25 +279,26 @@ def analyze_image(image_path: Path, timeout: int = 300) -> dict:
     Returns a dict with notes, the raw MusicXML, the key signature, and an error
     string when reading failed.
     """
-    xml_text, error = run_audiveris(image_path, timeout=timeout)
+    xml_text, grades, error = run_audiveris(image_path, timeout=timeout)
     if not xml_text:
-        return {"success": False, "notes": [], "musicxml": "", "key_fifths": None, "error": error}
+        return {"success": False, "notes": [], "musicxml": "", "key_fifths": None,
+                "confidence": None, "grades": grades, "decision_path": [], "error": error}
 
     tokens, key_fifths = musicxml_to_tokens(xml_text)
-    if not tokens:
-        return {"success": False, "notes": [], "musicxml": xml_text, "key_fifths": key_fifths,
-                "error": "Audiveris ran but found no pitched notes"}
+    ok, reason, decision_path = assess_confidence(xml_text, tokens, grades)
+    confidence = grades.get("mean_ctx") if grades and grades.get("head_count") else None
 
-    ok, reason = assess_confidence(xml_text, tokens)
-    if not ok:
-        # Reject an incoherent read rather than emit likely-garbage notes.
-        return {"success": False, "notes": [], "musicxml": xml_text, "key_fifths": key_fifths,
-                "error": f"Audiveris read rejected as low-confidence: {reason}"}
-
+    accepted = ok and bool(tokens)
     return {
-        "success": True,
-        "notes": tokens,
+        "success": accepted,
+        "notes": tokens if accepted else [],
         "musicxml": xml_text,
         "key_fifths": key_fifths,
-        "error": "",
+        "confidence": confidence,
+        "grades": grades,
+        "decision_path": decision_path,
+        "error": "" if accepted else (
+            f"Audiveris read rejected (low confidence): {reason}" if reason
+            else "Audiveris ran but found no pitched notes"
+        ),
     }

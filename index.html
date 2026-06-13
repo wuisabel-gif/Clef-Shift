@@ -1285,9 +1285,23 @@
       setStatus("File loaded but browser preview for this type is limited");
     }
 
+    // Build a short, human-readable note on the engine's decision so the
+    // accept/reject reasoning is never silent in the UI.
+    function engineDecisionNote(payload) {
+      if (payload.audiveris_rejected) {
+        const fails = (payload.audiveris_decision || [])
+          .filter((c) => !c.ok)
+          .map((c) => `${c.check} (${c.source})`)
+          .join(", ");
+        return `Audiveris read rejected — ${fails || "low confidence"}.`;
+      }
+      return "";
+    }
+
     async function attemptOcr(file) {
       try {
         const payload = await runOcr(file);
+        const decisionNote = engineDecisionNote(payload);
         if (payload.notes && payload.notes.length > 0) {
           noteInput.value = payload.notes.join(" ");
           noteInput.placeholder = "Detected notes from the upload";
@@ -1295,14 +1309,15 @@
           // Flag the limited fallback engine so users know sustained notes /
           // accidentals / rhythm need the Audiveris path.
           statusBox.classList.toggle("is-warning", Boolean(payload.fallback));
-          setStatus(payload.message);
+          setStatus(decisionNote ? `${payload.message}  ·  ${decisionNote}` : payload.message);
           return true;
         }
 
         noteInput.value = "";
         noteInput.placeholder = "No notes detected from this upload";
-        statusBox.classList.remove("is-warning");
-        setStatus(payload.message || "OCR finished but no notes were detected");
+        statusBox.classList.toggle("is-warning", Boolean(payload.audiveris_rejected));
+        setStatus([payload.message || "OCR finished but no notes were detected", decisionNote]
+          .filter(Boolean).join("  ·  "));
         return false;
       } catch (error) {
         noteInput.placeholder = "Detection needs the local Clef Shift server";
