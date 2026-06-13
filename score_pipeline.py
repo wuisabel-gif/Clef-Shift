@@ -194,3 +194,50 @@ def score_to_musicxml(score: ScoreData) -> str:
 def write_musicxml(score: ScoreData, output_path: Path) -> Path:
     output_path.write_text(score_to_musicxml(score), encoding="utf-8")
     return output_path
+
+
+# ---- Reading MusicXML produced by an OMR engine (e.g. Audiveris) ----
+
+# MusicXML <alter> -> the accidental suffix used by the rest of the app.
+ALTER_TO_ACC = {0: "", 1: "#", -1: "b", 2: "##", -2: "bb"}
+
+
+def musicxml_to_tokens(xml_text: str) -> tuple[list[str], int | None]:
+    """Parse MusicXML into pitch tokens (e.g. "Bb4") and key-signature fifths.
+
+    The token accidental is the *sounding* accidental, because MusicXML's
+    <alter> already folds in the key signature.
+    """
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return [], None
+
+    # Strip namespaces so plain tag lookups work regardless of the engine.
+    for el in root.iter():
+        if isinstance(el.tag, str) and "}" in el.tag:
+            el.tag = el.tag.split("}", 1)[1]
+
+    key_fifths: int | None = None
+    fifths_el = root.find(".//attributes/key/fifths")
+    if fifths_el is not None and (fifths_el.text or "").strip().lstrip("-").isdigit():
+        key_fifths = int(fifths_el.text.strip())
+
+    tokens: list[str] = []
+    for note in root.iter("note"):
+        if note.find("rest") is not None or note.find("chord") is not None:
+            continue
+        pitch = note.find("pitch")
+        if pitch is None:
+            continue
+        step = (pitch.findtext("step") or "").strip().upper()
+        octave = (pitch.findtext("octave") or "").strip()
+        try:
+            alter = int(float((pitch.findtext("alter") or "0").strip()))
+        except ValueError:
+            alter = 0
+        if step not in "ABCDEFG" or not octave.lstrip("-").isdigit():
+            continue
+        tokens.append(f"{step}{ALTER_TO_ACC.get(alter, '')}{octave}")
+
+    return tokens, key_fifths

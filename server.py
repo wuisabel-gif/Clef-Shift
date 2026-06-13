@@ -12,7 +12,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from omr_pipeline import analyze_image
-from oemer_pipeline import analyze_image as oemer_analyze, oemer_available
+from audiveris_pipeline import analyze_image as audiveris_analyze, audiveris_available
 from score_pipeline import build_score_data, score_to_musicxml, staff_position
 
 
@@ -146,9 +146,10 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 mode = "pdf"
 
             # Note reading priority:
-            #   1) oemer (ML OMR) -- reads pitch, octave, accidentals, key
-            #      signature and rhythm from real engraved scores.
-            #   2) the in-house heuristic detector -- fast, no deps, fallback.
+            #   1) Audiveris (OMR engine) -- reads pitch, octave, accidentals, key
+            #      signature and rhythm from real engraved scores, fast.
+            #   2) the in-house heuristic detector -- fallback when Audiveris is
+            #      unavailable or finds nothing.
             #   3) plain OCR text -- last resort, clearly labelled so it is never
             #      presented as notation read from a staff.
             raw_text, stderr_text = ocr_file(ocr_target)
@@ -160,14 +161,14 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
             message = ""
             heuristic = None
 
-            if oemer_available():
-                omr = oemer_analyze(ocr_target)
+            if audiveris_available():
+                omr = audiveris_analyze(ocr_target)
                 if omr.get("notes"):
                     notes = omr["notes"]
-                    detection_mode = "oemer-omr"
+                    detection_mode = "audiveris-omr"
                     source_musicxml = omr.get("musicxml", "")
                     key_fifths = omr.get("key_fifths")
-                    message = f"Read {len(notes)} note(s) from the notation with oemer."
+                    message = f"Read {len(notes)} note(s) from the notation with Audiveris."
                 elif omr.get("error") and not warning:
                     warning = omr["error"]
 
