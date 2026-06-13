@@ -1,0 +1,14 @@
+
+# Clef Shift detector artifacts
+debug/
+test/fixtures/*.pdf
+test/fixtures/_*.png
+__pycache__/
+
+# Local engine environments / build output (never committed)
+.venv-oemer/
+.venv*/
+# The Audiveris source checkout lives beside the repo, not inside it.
+
+# Local tooling config / vendored skills
+.claude/
