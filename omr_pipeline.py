@@ -1,12 +1,41 @@
+"""Optical music recognition (first-stage) for Clef Shift.
+
+This module reads notation *directly* from a rendered/scanned score image and
+returns detected note events. It is deliberately staff-aware: instead of doing
+generic blob detection, it (1) finds the staff systems, (2) learns the staff
+line spacing, and (3) scans for noteheads only at the discrete vertical
+positions where notes can actually sit (lines, spaces, and ledger positions).
+
+Pipeline:
+    image -> adaptive binarize -> staff systems -> staff line removal ->
+    staff-aware notehead scan -> stem gate -> pitch from staff position
+
+It intentionally returns a rich ``DetectionResult`` (with a success flag, a
+human-readable failure reason, and debug-image paths) so the rest of the app
+can stay honest when detection fails instead of faking a conversion.
+
+Current scope / known limits (tracked for follow-up phases):
+  * Pitch is inferred from staff position only. Accidentals printed next to a
+    note are NOT yet folded into the pitch (an F#5 currently reads as F5).
+  * Duration is not yet read from notehead shape/beams; callers should treat
+    durations as unknown. Open noteheads (half/whole) are under-detected
+    because the scanner favors solid noteheads, and whole notes (no stem) are
+    rejected by the stem gate. These are deliberate trade-offs for this phase.
+"""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
+from scipy import ndimage
 
+
+# --- pitch geometry -------------------------------------------------------
 
 BOTTOM_DIATONIC = {
     "treble": ("E", 4),
@@ -16,11 +45,44 @@ BOTTOM_DIATONIC = {
 STEP_NAMES = ["C", "D", "E", "F", "G", "A", "B"]
 STEP_TO_INDEX = {step: idx for idx, step in enumerate(STEP_NAMES)}
 
+# --- detector tuning ------------------------------------------------------
+# All spatial thresholds are expressed as multiples of the measured staff
+# spacing (distance between two adjacent staff lines), so the detector is
+# resolution-independent.
+
+TARGET_WIDTH = 1800          # upscale narrow images to roughly this width
+ADAPTIVE_OFFSET = 12         # local-mean minus this -> ink (document binarization)
+STAFF_OPEN_FRACTION = 0.28   # horizontal opening length as a fraction of width
+STAFF_ROW_FRACTION = 0.35    # a staff-line row must keep >= this * max strength
+
+NOTEHEAD_W = 1.20            # notehead window width  (x spacing units)
+NOTEHEAD_H = 0.85            # notehead window height (x spacing units)
+FILL_MIN = 0.42              # min ink fill ratio for a solid-notehead window
+FILL_MAX = 0.95              # above this is a solid bar/blob, not a notehead
+CORE_MIN = 0.85              # min ink fill of the notehead *core*. Solid heads
+                             # are dense at the center; sharps/naturals/flats
+                             # and the time-signature C are hollow there.
+CORE_W = 0.32                # core window half-width  (x spacing units)
+CORE_H = 0.30                # core window half-height (x spacing units)
+SUPPRESS_DX = 0.70           # NMS: collapse candidates closer than this in x
+SUPPRESS_DY = 0.80           # NMS: ... and this in y (in spacing units)
+BEAM_MAX_W = 2.6             # max horizontal solid extent of a notehead. Beams
+                             # are solid bars far wider than this, so this gate
+                             # rejects beam segments that pass the fill/core test.
+                             # Headroom above ~2.1s leaves ledger-line notes
+                             # (whose ledger adds horizontal ink) intact.
+STEM_MIN = 1.6               # required stem length (spacing units)
+HEADER_TALL = 3.5            # clef/brace gate: taller than this (spacing units)
+HEADER_WIDE = 2.0            # ... and wider than this. A stemmed note is tall
+                             # but narrow, so this avoids skipping the 1st note.
+
 
 @dataclass
 class StaffGroup:
-    lines: list[float]
+    lines: list[float]       # 5 line center y-positions, top -> bottom
     spacing: float
+    x_start: float
+    x_end: float
 
 
 @dataclass
@@ -28,247 +90,611 @@ class NoteCandidate:
     x: float
     y: float
     staff_index: int
+    step: int                # diatonic steps above the bottom staff line
     token: str
+    fill: float
+    has_stem: bool = False
 
 
-def load_binary_image(image_path: Path) -> np.ndarray:
+@dataclass
+class DetectionResult:
+    success: bool
+    reason: str
+    notes: list[str]
+    staff_count: int
+    note_count: int
+    spacing: float
+    debug_dir: Optional[str] = None
+    debug_images: list[str] = field(default_factory=list)
+    detail: dict = field(default_factory=dict)
+
+
+# --- image loading & binarization ----------------------------------------
+
+def load_gray(image_path: Path) -> np.ndarray:
+    """Load as grayscale, upscaling small images so spacing has enough pixels."""
     image = Image.open(image_path).convert("L")
-    target_width = 1800
-    if image.width < target_width:
-        scale = target_width / image.width
-        image = image.resize((int(image.width * scale), int(image.height * scale)), Image.Resampling.LANCZOS)
-    gray = np.array(image, dtype=np.uint8)
-    threshold = max(110, int(np.percentile(gray, 42)))
-    binary = gray < threshold
-    return binary
+    if image.width < TARGET_WIDTH:
+        scale = TARGET_WIDTH / image.width
+        image = image.resize(
+            (int(image.width * scale), int(image.height * scale)),
+            Image.Resampling.LANCZOS,
+        )
+    return np.array(image, dtype=np.uint8)
+
+
+def adaptive_binarize(gray: np.ndarray) -> np.ndarray:
+    """Local-adaptive document threshold (robust to uneven lighting / scans).
+
+    A pixel is ink if it is meaningfully darker than its local neighborhood.
+    This is far more reliable on near-white pages than global Otsu, which
+    degenerates when ink is a tiny fraction of the image.
+    """
+    g = gray.astype(np.float32)
+    window = int(round(min(gray.shape) * 0.025))
+    window += (window + 1) % 2  # force odd
+    window = max(window, 15)
+    local = ndimage.uniform_filter(g, size=window)
+    return g < (local - ADAPTIVE_OFFSET)
+
+
+# --- staff detection ------------------------------------------------------
+
+def horizontal_opening(binary: np.ndarray, length: int) -> np.ndarray:
+    """Keep only ink that belongs to a horizontal run of >= ``length`` pixels.
+
+    Implemented with cumulative sums (erosion then dilation by a 1xL element)
+    so it stays fast even for very long structuring elements. This isolates
+    staff lines from noteheads, stems, and text.
+    """
+    height, width = binary.shape
+    if length < 1 or length > width:
+        return np.zeros_like(binary)
+
+    cum = np.zeros((height, width + 1), dtype=np.int32)
+    np.cumsum(binary, axis=1, out=cum[:, 1:])
+    window = cum[:, length:] - cum[:, : width - length + 1]  # ink count per window
+    eroded = window == length                                 # fully-ink window left-edges
+
+    starts = eroded.shape[1]
+    edge_cum = np.zeros((height, starts + 1), dtype=np.int32)
+    np.cumsum(eroded, axis=1, out=edge_cum[:, 1:])
+
+    ks = np.arange(width)
+    lo = np.clip(ks - length + 1, 0, starts)
+    hi = np.clip(ks + 1, 0, starts)
+    return (edge_cum[:, hi] - edge_cum[:, lo]) > 0
 
 
 def group_consecutive(rows: Iterable[int]) -> list[list[int]]:
     rows = list(rows)
     if not rows:
-      return []
+        return []
     groups: list[list[int]] = [[rows[0]]]
     for row in rows[1:]:
-        if row == groups[-1][-1] + 1:
+        if row <= groups[-1][-1] + 2:
             groups[-1].append(row)
         else:
             groups.append([row])
     return groups
 
 
-def detect_staff_groups(binary: np.ndarray) -> list[StaffGroup]:
-    row_strength = binary.mean(axis=1)
-    smoothed = np.convolve(row_strength, np.ones(5) / 5.0, mode="same")
-    lower = max(0.07, float(np.percentile(smoothed, 85)))
-    upper = min(0.55, float(np.percentile(smoothed, 98)))
-    candidate_rows = np.where((smoothed >= lower) & (smoothed <= upper))[0]
-    row_groups = group_consecutive(candidate_rows)
-    line_centers = [float(sum(group) / len(group)) for group in row_groups if 1 <= len(group) <= 8]
-    if len(line_centers) < 5:
-        return []
+def estimate_spacing(line_strength: np.ndarray, line_centers: list[float]) -> float:
+    """Estimate staff line spacing.
 
-    diffs = np.diff(line_centers)
-    near_diffs = [diff for diff in diffs if 6 <= diff <= 42]
-    spacing = float(np.median(near_diffs)) if near_diffs else 12.0
-    tolerance = max(3.0, spacing * 0.55)
+    Primary signal is the autocorrelation of the staff-line row strength (its
+    dominant short-range period is the spacing). Cross-checked against the
+    median of adjacent line-center gaps.
+    """
+    centers_spacing = 0.0
+    if len(line_centers) >= 2:
+        diffs = np.diff(sorted(line_centers))
+        small = diffs[diffs >= 2]
+        if small.size:
+            base = float(np.median(small))
+            near = small[small <= base * 1.8]
+            centers_spacing = float(np.median(near)) if near.size else base
 
-    staffs: list[StaffGroup] = []
-    i = 0
-    while i <= len(line_centers) - 5:
-        candidate = line_centers[i:i + 5]
-        candidate_diffs = np.diff(candidate)
-        if all(abs(diff - spacing) <= tolerance for diff in candidate_diffs):
-            staffs.append(StaffGroup(lines=candidate, spacing=float(sum(candidate_diffs) / len(candidate_diffs))))
-            i += 5
-        else:
-            i += 1
-    return staffs
+    sig = line_strength - line_strength.mean()
+    ac = np.correlate(sig, sig, mode="full")[len(sig) - 1:]
+    lo, hi = 4, max(8, len(sig) // 8)
+    auto_spacing = float(lo + int(np.argmax(ac[lo:hi]))) if hi > lo else 0.0
+
+    if centers_spacing and auto_spacing:
+        # Trust the line-center median, but only if autocorr broadly agrees.
+        if 0.6 <= centers_spacing / auto_spacing <= 1.6:
+            return centers_spacing
+        return auto_spacing
+    return centers_spacing or auto_spacing or 12.0
 
 
-def remove_staff_lines(binary: np.ndarray, staffs: list[StaffGroup]) -> np.ndarray:
+def group_into_staves(
+    line_centers: list[float], spacing: float, x_start: float, x_end: float
+) -> list[StaffGroup]:
+    """Group detected line centers into 5-line systems.
+
+    Tolerant: a system is accepted if at least 4 of 5 expected lines are found,
+    so one broken/missing staff line does not lose the whole system. Missing
+    lines are filled in by interpolation from the spacing.
+    """
+    centers = sorted(line_centers)
+    used = [False] * len(centers)
+    tol = spacing * 0.40
+    staves: list[StaffGroup] = []
+
+    for i, top in enumerate(centers):
+        if used[i]:
+            continue
+        positions: list[float] = []
+        matched: list[Optional[int]] = []
+        for k in range(5):
+            target = top + k * spacing
+            best, best_d = None, tol
+            for j, c in enumerate(centers):
+                if used[j]:
+                    continue
+                d = abs(c - target)
+                if d < best_d:
+                    best_d, best = d, j
+            if best is None:
+                positions.append(target)
+                matched.append(None)
+            else:
+                positions.append(centers[best])
+                matched.append(best)
+
+        if sum(1 for m in matched if m is not None) >= 4:
+            for m in matched:
+                if m is not None:
+                    used[m] = True
+            staves.append(
+                StaffGroup(lines=positions, spacing=spacing, x_start=x_start, x_end=x_end)
+            )
+    return staves
+
+
+def detect_staff_groups(binary: np.ndarray) -> tuple[list[StaffGroup], np.ndarray, float]:
+    """Return (staff systems, staff-line mask, spacing)."""
+    height, width = binary.shape
+    length = max(20, int(width * STAFF_OPEN_FRACTION))
+    lines_mask = horizontal_opening(binary, length)
+
+    row_strength = lines_mask.sum(axis=1).astype(np.float32)
+    if row_strength.max() <= 0:
+        return [], lines_mask, 0.0
+
+    strong_rows = np.where(row_strength >= row_strength.max() * STAFF_ROW_FRACTION)[0]
+    row_groups = group_consecutive(strong_rows.tolist())
+    line_centers = [float(np.mean(group)) for group in row_groups]
+    if len(line_centers) < 4:
+        return [], lines_mask, 0.0
+
+    spacing = estimate_spacing(row_strength, line_centers)
+
+    # Horizontal extent where staff lines actually run (skip page margins).
+    col_strength = lines_mask.sum(axis=0)
+    inked_cols = np.where(col_strength > col_strength.max() * 0.25)[0]
+    x_start = float(inked_cols[0]) if inked_cols.size else 0.0
+    x_end = float(inked_cols[-1]) if inked_cols.size else float(width - 1)
+
+    staves = group_into_staves(line_centers, spacing, x_start, x_end)
+    return staves, lines_mask, spacing
+
+
+def remove_staff_lines(binary: np.ndarray, staves: list[StaffGroup]) -> np.ndarray:
+    """Erase staff lines while preserving stems/noteheads that cross them.
+
+    Within each line band, a pixel is only erased if there is no ink just
+    above and below the band at that column (i.e. it is part of the thin
+    horizontal line, not a vertical stroke passing through).
+    """
     result = binary.copy()
-    for staff in staffs:
+    height = binary.shape[0]
+    for staff in staves:
+        half = max(1, int(round(staff.spacing * 0.16)))
         for line in staff.lines:
             row = int(round(line))
-            half = max(1, int(round(staff.spacing * 0.10)))
             top = max(0, row - half)
-            bottom = min(result.shape[0], row + half + 1)
-            result[top:bottom, :] = False
+            bottom = min(height, row + half + 1)
+            above_row = max(0, top - 1)
+            below_row = min(height - 1, bottom)
+            crossing = binary[above_row] & binary[below_row]  # vertical stroke -> keep
+            band = result[top:bottom]
+            band[:, ~crossing] = False
     return result
 
 
-def connected_components(binary: np.ndarray) -> list[tuple[int, int, int, int, list[tuple[int, int]]]]:
-    height, width = binary.shape
-    visited = np.zeros((height, width), dtype=bool)
-    components: list[tuple[int, int, int, int, list[tuple[int, int]]]] = []
-    black_positions = np.argwhere(binary)
+# --- notehead scanning ----------------------------------------------------
 
-    for y, x in black_positions:
-        if visited[y, x]:
-            continue
-        stack = [(int(y), int(x))]
-        visited[y, x] = True
-        pixels: list[tuple[int, int]] = []
-        min_y = max_y = int(y)
-        min_x = max_x = int(x)
-
-        while stack:
-            cy, cx = stack.pop()
-            pixels.append((cy, cx))
-            min_y = min(min_y, cy)
-            max_y = max(max_y, cy)
-            min_x = min(min_x, cx)
-            max_x = max(max_x, cx)
-
-            for ny in range(max(0, cy - 1), min(height, cy + 2)):
-                for nx in range(max(0, cx - 1), min(width, cx + 2)):
-                    if not visited[ny, nx] and binary[ny, nx]:
-                        visited[ny, nx] = True
-                        stack.append((ny, nx))
-
-        components.append((min_y, min_x, max_y, max_x, pixels))
-    return components
+def integral_image(binary: np.ndarray) -> np.ndarray:
+    integral = np.zeros((binary.shape[0] + 1, binary.shape[1] + 1), dtype=np.int32)
+    integral[1:, 1:] = binary.astype(np.int32).cumsum(axis=0).cumsum(axis=1)
+    return integral
 
 
-def estimate_note_center(component: tuple[int, int, int, int, list[tuple[int, int]]], binary: np.ndarray, spacing: float) -> tuple[float, float]:
-    min_y, min_x, max_y, max_x, _pixels = component
-    box = binary[min_y:max_y + 1, min_x:max_x + 1]
-    window_h = max(4, int(round(spacing * 1.2)))
-    window_w = max(5, int(round(spacing * 1.6)))
-    integral = box.astype(np.int32).cumsum(axis=0).cumsum(axis=1)
-
-    def rect_sum(y0: int, x0: int, y1: int, x1: int) -> int:
-        total = integral[y1, x1]
-        if y0 > 0:
-            total -= integral[y0 - 1, x1]
-        if x0 > 0:
-            total -= integral[y1, x0 - 1]
-        if y0 > 0 and x0 > 0:
-            total += integral[y0 - 1, x0 - 1]
-        return int(total)
-
-    best_score = -1
-    best_center = ((min_y + max_y) / 2, (min_x + max_x) / 2)
-
-    max_scan_y = max(0, box.shape[0] - window_h)
-    max_scan_x = max(0, box.shape[1] - window_w)
-    for y in range(0, max_scan_y + 1):
-        for x in range(0, max_scan_x + 1):
-            score = rect_sum(y, x, min(box.shape[0] - 1, y + window_h - 1), min(box.shape[1] - 1, x + window_w - 1))
-            if score > best_score:
-                best_score = score
-                best_center = (min_y + y + window_h / 2, min_x + x + window_w / 2)
-    return best_center
-
-
-def note_token_from_y(y: float, staff: StaffGroup, source_clef: str) -> str:
-    bottom_step, bottom_octave = BOTTOM_DIATONIC[source_clef]
-    bottom_index = bottom_octave * 7 + STEP_TO_INDEX[bottom_step]
-    relative = round((staff.lines[-1] - y) / (staff.spacing / 2))
-    diatonic_index = bottom_index + relative
-    octave, step_index = divmod(diatonic_index, 7)
-    return f"{STEP_NAMES[step_index]}{octave}"
-
-
-def smooth_signal(signal: np.ndarray, window: int) -> np.ndarray:
-    window = max(1, int(window))
-    kernel = np.ones(window, dtype=np.float32) / float(window)
-    return np.convolve(signal.astype(np.float32), kernel, mode="same")
-
-
-def find_peak_ranges(signal: np.ndarray, threshold: float) -> list[tuple[int, int]]:
-    indices = np.where(signal > threshold)[0]
-    groups = group_consecutive(indices)
-    return [(group[0], group[-1]) for group in groups]
-
-
-def score_note_window(binary: np.ndarray, center_x: float, center_y: float, spacing: float) -> float:
-    half_h = max(4, int(round(spacing * 0.52)))
-    half_w = max(5, int(round(spacing * 0.72)))
-    y0 = max(0, int(round(center_y)) - half_h)
-    y1 = min(binary.shape[0], int(round(center_y)) + half_h + 1)
-    x0 = max(0, int(round(center_x)) - half_w)
-    x1 = min(binary.shape[1], int(round(center_x)) + half_w + 1)
+def window_fill(integral: np.ndarray, cy: int, cx: int, half_h: int, half_w: int) -> float:
+    """Ink fill ratio of a notehead-sized window centered at (cy, cx)."""
+    h, w = integral.shape[0] - 1, integral.shape[1] - 1
+    y0, y1 = max(0, cy - half_h), min(h, cy + half_h + 1)
+    x0, x1 = max(0, cx - half_w), min(w, cx + half_w + 1)
     if y0 >= y1 or x0 >= x1:
         return 0.0
+    total = integral[y1, x1] - integral[y0, x1] - integral[y1, x0] + integral[y0, x0]
+    return float(total) / float((y1 - y0) * (x1 - x0))
 
-    window = binary[y0:y1, x0:x1]
-    ink = float(window.sum())
-    fill_ratio = ink / float(window.size)
-    if fill_ratio < 0.10 or fill_ratio > 0.75:
+
+def longest_vertical_run(strip: np.ndarray) -> int:
+    """Longest run of consecutive ink in any single column of ``strip``."""
+    if strip.size == 0:
+        return 0
+    best = 0
+    for col in range(strip.shape[1]):
+        run = 0
+        for val in strip[:, col]:
+            if val:
+                run += 1
+                best = max(best, run)
+            else:
+                run = 0
+    return best
+
+
+def horizontal_solid_extent(staff_removed: np.ndarray, cx: float, cy: float, spacing: float) -> float:
+    """Width of the contiguous solid-ink band through (cx, cy).
+
+    A notehead is a compact blob (~1.3 spacing wide); a beam is a long solid
+    bar. Measuring how far solid ink extends horizontally separates them.
+    """
+    s = spacing
+    half = max(1, int(round(0.22 * s)))
+    cyi, cxi = int(round(cy)), int(round(cx))
+    y0, y1 = max(0, cyi - half), min(staff_removed.shape[0], cyi + half + 1)
+    strip = staff_removed[y0:y1]
+    if strip.size == 0:
         return 0.0
-
-    # Favor compact elliptical blobs over broad noisy windows.
-    return ink * (1.0 - abs(fill_ratio - 0.34))
-
-
-def detect_notes_in_staff(binary: np.ndarray, staff: StaffGroup, staff_index: int, source_clef: str) -> list[NoteCandidate]:
-    top_bound = max(0, int(round(staff.lines[0] - staff.spacing * 3.0)))
-    bottom_bound = min(binary.shape[0], int(round(staff.lines[-1] + staff.spacing * 3.0)))
-    left_bound = 120
-    right_bound = max(left_bound + 1, binary.shape[1] - 20)
-    crop = binary[top_bound:bottom_bound, left_bound:right_bound]
-    if crop.size == 0:
-        return []
-
-    column_strength = crop.mean(axis=0)
-    smoothed = smooth_signal(column_strength, max(3, int(round(staff.spacing * 0.9))))
-    threshold = max(float(smoothed.mean() + smoothed.std() * 0.55), float(np.percentile(smoothed, 72)))
-    peak_ranges = find_peak_ranges(smoothed, threshold)
-
-    results: list[NoteCandidate] = []
-    for start, end in peak_ranges:
-        width = end - start + 1
-        if width < max(4, int(round(staff.spacing * 0.30))) or width > max(24, int(round(staff.spacing * 2.3))):
-            continue
-
-        center_x = left_bound + (start + end) / 2.0
-        best_score = 0.0
-        best_y = None
-
-        for relative_step in range(-6, 16):
-            candidate_y = staff.lines[-1] - relative_step * (staff.spacing / 2.0)
-            score = score_note_window(binary, center_x, candidate_y, staff.spacing)
-            if score > best_score:
-                best_score = score
-                best_y = candidate_y
-
-        if best_y is None:
-            continue
-        if best_score < max(10.0, staff.spacing * staff.spacing * 0.22):
-            continue
-
-        token = note_token_from_y(best_y, staff, source_clef)
-        results.append(NoteCandidate(x=center_x, y=best_y, staff_index=staff_index, token=token))
-
-    deduped: list[NoteCandidate] = []
-    for candidate in results:
-        if deduped and abs(candidate.x - deduped[-1].x) < max(14, staff.spacing * 0.75):
-            continue
-        deduped.append(candidate)
-    return deduped
+    col_frac = strip.mean(axis=0)
+    width = col_frac.shape[0]
+    if cxi < 0 or cxi >= width or col_frac[cxi] < 0.5:
+        return 0.0
+    left = cxi
+    while left > 0 and col_frac[left - 1] >= 0.55:
+        left -= 1
+    right = cxi
+    while right < width - 1 and col_frac[right + 1] >= 0.55:
+        right += 1
+    return float(right - left + 1)
 
 
-def detect_notes(image_path: Path, source_clef: str) -> list[str]:
-    binary = load_binary_image(image_path)
-    staffs = detect_staff_groups(binary)
-    if not staffs:
-        return []
+def has_stem(binary: np.ndarray, cx: float, cy: float, spacing: float) -> bool:
+    """True if a vertical stem is attached to the right (up) or left (down)."""
+    height = binary.shape[0]
+    s = spacing
+    stem_min = int(round(STEM_MIN * s))
+    near = int(round(0.30 * s))
+    far = int(round(0.85 * s))
+    reach = int(round(2.6 * s))
+    cxi, cyi = int(round(cx)), int(round(cy))
 
-    without_lines = remove_staff_lines(binary, staffs)
+    # stem up: to the right of the notehead, going upward
+    x0, x1 = cxi + near, cxi + far + 1
+    y0, y1 = max(0, cyi - reach), min(height, cyi + near)
+    if x1 > x0 and y1 > y0:
+        if longest_vertical_run(binary[y0:y1, max(0, x0):x1]) >= stem_min:
+            return True
+
+    # stem down: to the left of the notehead, going downward
+    x0, x1 = cxi - far, cxi - near + 1
+    y0, y1 = max(0, cyi - near), min(height, cyi + reach)
+    if x1 > x0 and y1 > y0:
+        if longest_vertical_run(binary[y0:y1, max(0, x0):x1]) >= stem_min:
+            return True
+    return False
+
+
+def header_skip_x(staff_removed: np.ndarray, staff: StaffGroup) -> float:
+    """X coordinate after the leading clef (and any tall leading glyphs).
+
+    Finds tall+wide connected components near the staff's left edge and returns
+    the right edge of the leftmost one, so the clef/brace is not scanned as
+    notes. Must run on the staff-line-removed image, otherwise the staff lines
+    connect every glyph into one component spanning the whole system.
+    """
+    binary = staff_removed
+    s = staff.spacing
+    top = max(0, int(round(staff.lines[0] - 2 * s)))
+    bottom = min(binary.shape[0], int(round(staff.lines[-1] + 2 * s)))
+    left = int(round(staff.x_start))
+    right = min(binary.shape[1], int(round(staff.x_start + 12 * s)))
+    if right <= left or bottom <= top:
+        return staff.x_start
+
+    region = binary[top:bottom, left:right]
+    labels, count = ndimage.label(region)
+    if count == 0:
+        return staff.x_start
+    skip = staff.x_start
+    for comp in ndimage.find_objects(labels):
+        ys, xs = comp
+        comp_h = ys.stop - ys.start
+        comp_w = xs.stop - xs.start
+        # Clef/brace: both tall and wide. A stemmed note is tall but narrow,
+        # so requiring width here keeps the first note from being skipped.
+        if comp_h >= HEADER_TALL * s and comp_w >= HEADER_WIDE * s:
+            skip = max(skip, left + xs.stop + 0.3 * s)
+    return skip
+
+
+def note_token_from_step(step: int, staff: StaffGroup, source_clef: str) -> tuple[str, int]:
+    """Map a diatonic step offset above the bottom line to (token, octave)."""
+    bottom_step, bottom_octave = BOTTOM_DIATONIC[source_clef]
+    bottom_index = bottom_octave * 7 + STEP_TO_INDEX[bottom_step]
+    diatonic_index = bottom_index + step
+    octave, step_index = divmod(diatonic_index, 7)
+    return f"{STEP_NAMES[step_index]}{octave}", octave
+
+
+def detect_notes_in_staff(
+    staff_removed: np.ndarray,
+    binary: np.ndarray,
+    staff: StaffGroup,
+    staff_index: int,
+    source_clef: str,
+    raw_candidates: list[tuple[float, float]],
+) -> list[NoteCandidate]:
+    """Scan one staff for noteheads at discrete staff positions."""
+    s = staff.spacing
+    half_h = max(2, int(round(NOTEHEAD_H * s / 2)))
+    half_w = max(3, int(round(NOTEHEAD_W * s / 2)))
+    integral = integral_image(staff_removed)
+    bottom_line = staff.lines[-1]
+
+    left = max(int(round(header_skip_x(staff_removed, staff))), int(round(staff.x_start)))
+    right = int(round(staff.x_end))
+
+    # Candidate scan: for each pitch row (half-spacing steps from a couple
+    # ledger lines below to several above), slide the notehead window in x.
     candidates: list[NoteCandidate] = []
+    for step in range(-5, 18):
+        cy = bottom_line - step * (s / 2.0)
+        cyi = int(round(cy))
+        if cyi < 0 or cyi >= staff_removed.shape[0]:
+            continue
+        x = left
+        step_x = max(1, half_w // 2)
+        while x <= right:
+            fill = window_fill(integral, cyi, x, half_h, half_w)
+            if FILL_MIN <= fill <= FILL_MAX:
+                raw_candidates.append((float(x), cy))
+                candidates.append(
+                    NoteCandidate(
+                        x=float(x), y=cy, staff_index=staff_index, step=step,
+                        token="", fill=fill,
+                    )
+                )
+            x += step_x
 
-    for staff_index, staff in enumerate(staffs):
-        candidates.extend(detect_notes_in_staff(without_lines, staff, staff_index, source_clef))
+    # Non-max suppression: collapse the many overlapping hits (a real notehead
+    # fires at several adjacent x offsets and pitch rows) down to one per note,
+    # keeping the highest-fill hit -> best-aligned pitch row.
+    candidates.sort(key=lambda c: c.fill, reverse=True)
+    kept: list[NoteCandidate] = []
+    for cand in candidates:
+        if any(
+            abs(cand.x - k.x) < SUPPRESS_DX * s and abs(cand.y - k.y) < SUPPRESS_DY * s
+            for k in kept
+        ):
+            continue
+        kept.append(cand)
 
-    candidates.sort(key=lambda candidate: (candidate.staff_index, candidate.x))
+    # Core + stem gates. Core fill rejects hollow glyphs (sharps, naturals,
+    # flats, the time-signature C) that pass the looser window-fill test. The
+    # stem gate rejects remaining stray marks; real notes here carry a stem.
+    core_h = max(1, int(round(CORE_H * s)))
+    core_w = max(1, int(round(CORE_W * s)))
+    accepted: list[NoteCandidate] = []
+    for cand in kept:
+        core = window_fill(integral, int(round(cand.y)), int(round(cand.x)), core_h, core_w)
+        if core < CORE_MIN:
+            continue
+        if horizontal_solid_extent(staff_removed, cand.x, cand.y, s) > BEAM_MAX_W * s:
+            continue
+        if not has_stem(staff_removed, cand.x, cand.y, s):
+            continue
+        cand.has_stem = True
+        token, _octave = note_token_from_step(cand.step, staff, source_clef)
+        cand.token = token
+        accepted.append(cand)
 
-    deduped: list[NoteCandidate] = []
-    for candidate in candidates:
-        if deduped:
-            last = deduped[-1]
-            if candidate.staff_index == last.staff_index and abs(candidate.x - last.x) < 20:
-                continue
-        deduped.append(candidate)
+    accepted.sort(key=lambda c: c.x)
+    return accepted
 
-    return [candidate.token for candidate in deduped]
+
+# --- debug rendering ------------------------------------------------------
+
+def _to_rgb(gray: np.ndarray) -> Image.Image:
+    return Image.fromarray(gray).convert("RGB")
+
+
+def write_debug_images(
+    debug_dir: Path,
+    gray: np.ndarray,
+    binary: np.ndarray,
+    staves: list[StaffGroup],
+    raw_candidates: list[tuple[float, float]],
+    accepted: list[NoteCandidate],
+) -> list[str]:
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    written: list[str] = []
+
+    # 01 threshold
+    thr = Image.fromarray(np.where(binary, 0, 255).astype(np.uint8)).convert("RGB")
+    p = debug_dir / "01_threshold.png"
+    thr.save(p)
+    written.append(str(p))
+
+    # 02 staff overlay
+    img = _to_rgb(gray)
+    draw = ImageDraw.Draw(img)
+    for staff in staves:
+        for line in staff.lines:
+            draw.line([(staff.x_start, line), (staff.x_end, line)], fill=(220, 30, 30), width=1)
+        top = staff.lines[0] - staff.spacing * 4
+        bottom = staff.lines[-1] + staff.spacing * 4
+        draw.rectangle([staff.x_start, top, staff.x_end, bottom], outline=(30, 140, 30))
+    p = debug_dir / "02_staff_overlay.png"
+    img.save(p)
+    written.append(str(p))
+
+    # 03 raw candidates
+    img = _to_rgb(gray)
+    draw = ImageDraw.Draw(img)
+    for cx, cy in raw_candidates:
+        draw.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], outline=(210, 160, 0))
+    p = debug_dir / "03_candidates.png"
+    img.save(p)
+    written.append(str(p))
+
+    # 04 accepted notes
+    img = _to_rgb(gray)
+    draw = ImageDraw.Draw(img)
+    for note in accepted:
+        r = 6
+        draw.ellipse(
+            [note.x - r, note.y - r, note.x + r, note.y + r],
+            outline=(20, 110, 220), width=2,
+        )
+        draw.text((note.x - 6, note.y - 22), note.token, fill=(20, 110, 220))
+    p = debug_dir / "04_accepted_notes.png"
+    img.save(p)
+    written.append(str(p))
+
+    return written
+
+
+# --- top-level API --------------------------------------------------------
+
+def analyze_image(
+    image_path: Path,
+    source_clef: str = "treble",
+    debug: bool = False,
+    debug_dir: Optional[Path] = None,
+) -> DetectionResult:
+    """Read notes directly from a score image. Honest about failure."""
+    if source_clef not in BOTTOM_DIATONIC:
+        source_clef = "treble"
+
+    try:
+        gray = load_gray(Path(image_path))
+    except Exception as exc:  # noqa: BLE001 - report any decode failure honestly
+        return DetectionResult(
+            success=False, reason=f"Could not open image: {exc}",
+            notes=[], staff_count=0, note_count=0, spacing=0.0,
+        )
+
+    binary = adaptive_binarize(gray)
+    if not binary.any():
+        return DetectionResult(
+            success=False,
+            reason="Image appears blank after thresholding (no ink detected).",
+            notes=[], staff_count=0, note_count=0, spacing=0.0,
+        )
+
+    staves, _lines_mask, spacing = detect_staff_groups(binary)
+    detail: dict = {
+        "image_size": [int(gray.shape[1]), int(gray.shape[0])],
+        "spacing": round(spacing, 2),
+        "staff_count": len(staves),
+        "staves": [[round(v, 1) for v in s.lines] for s in staves],
+    }
+
+    if not staves:
+        result = DetectionResult(
+            success=False,
+            reason=(
+                "No staff systems detected. The image may not contain printed "
+                "five-line staves, or the contrast/resolution is too low."
+            ),
+            notes=[], staff_count=0, note_count=0, spacing=spacing, detail=detail,
+        )
+        _maybe_write_debug(debug, debug_dir, image_path, gray, binary, staves, [], [], result)
+        return result
+
+    staff_removed = remove_staff_lines(binary, staves)
+    raw_candidates: list[tuple[float, float]] = []
+    accepted: list[NoteCandidate] = []
+    for idx, staff in enumerate(staves):
+        accepted.extend(
+            detect_notes_in_staff(
+                staff_removed, binary, staff, idx, source_clef, raw_candidates
+            )
+        )
+
+    accepted.sort(key=lambda c: (c.staff_index, c.x))
+    notes = [c.token for c in accepted]
+    detail["raw_candidate_count"] = len(raw_candidates)
+    detail["accepted_notes"] = [
+        {"staff": c.staff_index, "x": round(c.x, 1), "y": round(c.y, 1),
+         "token": c.token, "fill": round(c.fill, 3)}
+        for c in accepted
+    ]
+
+    if not notes:
+        result = DetectionResult(
+            success=False,
+            reason=(
+                f"Found {len(staves)} staff system(s) but no noteheads. The "
+                "notation may be too faint, handwritten, or low resolution."
+            ),
+            notes=[], staff_count=len(staves), note_count=0, spacing=spacing,
+            detail=detail,
+        )
+        _maybe_write_debug(
+            debug, debug_dir, image_path, gray, binary, staves, raw_candidates, accepted, result
+        )
+        return result
+
+    result = DetectionResult(
+        success=True,
+        reason=f"Detected {len(notes)} note(s) across {len(staves)} staff system(s).",
+        notes=notes, staff_count=len(staves), note_count=len(notes), spacing=spacing,
+        detail=detail,
+    )
+    _maybe_write_debug(
+        debug, debug_dir, image_path, gray, binary, staves, raw_candidates, accepted, result
+    )
+    return result
+
+
+def _maybe_write_debug(
+    debug: bool,
+    debug_dir: Optional[Path],
+    image_path: Path,
+    gray: np.ndarray,
+    binary: np.ndarray,
+    staves: list[StaffGroup],
+    raw_candidates: list[tuple[float, float]],
+    accepted: list[NoteCandidate],
+    result: DetectionResult,
+) -> None:
+    if not debug:
+        return
+    target = Path(debug_dir) if debug_dir else Path(image_path).resolve().parent / "debug"
+    try:
+        images = write_debug_images(target, gray, binary, staves, raw_candidates, accepted)
+        report = {
+            "success": result.success,
+            "reason": result.reason,
+            "notes": result.notes,
+            **result.detail,
+        }
+        report_path = target / "detection_report.json"
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        result.debug_dir = str(target)
+        result.debug_images = images + [str(report_path)]
+    except Exception as exc:  # noqa: BLE001 - debug output must never break detection
+        result.detail["debug_error"] = str(exc)
+
+
+def detect_notes(image_path: Path, source_clef: str = "treble") -> list[str]:
+    """Backwards-compatible wrapper returning just the note tokens."""
+    return analyze_image(image_path, source_clef).notes
