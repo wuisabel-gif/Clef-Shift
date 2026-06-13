@@ -10,8 +10,10 @@ launcher, the same way server.py shells out to tesseract and ghostscript.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from typing import Optional
@@ -19,6 +21,92 @@ from typing import Optional
 from score_pipeline import musicxml_to_tokens
 
 ROOT = Path(__file__).resolve().parent
+
+# --- confidence gate ------------------------------------------------------
+# Audiveris is accurate on clean scans but can misread a poor upload into
+# garbage (sometimes derived from the clef/key/time region). Rather than pass
+# that through, we sanity-check the read and, if it looks incoherent, return no
+# notes -- honouring "no notes rather than wrong notes" for the Audiveris path
+# too. A token-level gate cannot catch a misread that happens to look like a
+# plausible short note list; the measure-duration check is the strongest signal
+# because metadata misreads usually break the bar arithmetic.
+
+MIN_NOTES = 2                # fewer than this from a whole page is suspicious
+MIDI_LOW, MIDI_HIGH = 21, 108  # A0..C8 -- real notation lives well inside this
+WILD_JUMP_SEMITONES = 24    # a leap larger than two octaves between adjacent notes
+WILD_JUMP_FRACTION = 0.5    # ... this fraction of leaps being wild = scattered
+MEASURE_BAD_FRACTION = 0.5  # ... this fraction of measures not adding up = garbage
+
+_TOKEN_RE = re.compile(r"^([A-G])([#b]?)(-?\d+)$")
+_STEP_SEMI = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+
+
+def _midi(token: str) -> Optional[int]:
+    m = _TOKEN_RE.match(token.strip())
+    if not m:
+        return None
+    step, acc, octave = m.group(1), m.group(2), int(m.group(3))
+    semi = _STEP_SEMI[step] + (1 if acc == "#" else -1 if acc == "b" else 0)
+    return (octave + 1) * 12 + semi
+
+
+def _measure_coherence(xml_text: str) -> tuple[int, int]:
+    """Return (malformed_measures, total_checkable_measures).
+
+    A measure is malformed when its notes/rests do not sum to the duration the
+    time signature implies -- a common symptom of a garbled OMR read.
+    """
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return 0, 0
+    for el in root.iter():
+        if isinstance(el.tag, str) and "}" in el.tag:
+            el.tag = el.tag.split("}", 1)[1]
+
+    divisions = beats = beat_type = None
+    bad = total = 0
+    for measure in root.iter("measure"):
+        d = measure.find(".//divisions")
+        if d is not None and (d.text or "").strip().isdigit():
+            divisions = int(d.text)
+        t = measure.find(".//time")
+        if t is not None:
+            b, bt = t.findtext("beats"), t.findtext("beat-type")
+            if b and b.strip().isdigit():
+                beats = int(b)
+            if bt and bt.strip().isdigit():
+                beat_type = int(bt)
+        if not (divisions and beats and beat_type):
+            continue
+        expected = divisions * beats * 4 / beat_type
+        dur = 0
+        for note in measure.iter("note"):
+            if note.find("chord") is not None:
+                continue
+            dt = note.findtext("duration")
+            if dt and dt.strip().lstrip("-").isdigit():
+                dur += int(dt)
+        total += 1
+        if abs(dur - expected) > max(1.0, 0.1 * expected):
+            bad += 1
+    return bad, total
+
+
+def assess_confidence(xml_text: str, tokens: list[str]) -> tuple[bool, str]:
+    """Decide whether an Audiveris read is trustworthy. (ok, reason_if_not)."""
+    if len(tokens) < MIN_NOTES:
+        return False, f"only {len(tokens)} note(s) read"
+    midis = [_midi(t) for t in tokens]
+    if any(m is None or m < MIDI_LOW or m > MIDI_HIGH for m in midis):
+        return False, "notes fall outside a plausible pitch range"
+    jumps = [abs(midis[i + 1] - midis[i]) for i in range(len(midis) - 1)]
+    if jumps and sum(j > WILD_JUMP_SEMITONES for j in jumps) / len(jumps) >= WILD_JUMP_FRACTION:
+        return False, "notes jump erratically (incoherent line)"
+    bad, total = _measure_coherence(xml_text)
+    if total >= 2 and bad / total > MEASURE_BAD_FRACTION:
+        return False, "measures do not add up to the time signature"
+    return True, ""
 
 # Launcher produced by `gradlew :app:installDist`. The Audiveris checkout lives
 # beside the project (it is vendor code, kept out of this repo). Override with
@@ -100,10 +188,20 @@ def analyze_image(image_path: Path, timeout: int = 300) -> dict:
         return {"success": False, "notes": [], "musicxml": "", "key_fifths": None, "error": error}
 
     tokens, key_fifths = musicxml_to_tokens(xml_text)
+    if not tokens:
+        return {"success": False, "notes": [], "musicxml": xml_text, "key_fifths": key_fifths,
+                "error": "Audiveris ran but found no pitched notes"}
+
+    ok, reason = assess_confidence(xml_text, tokens)
+    if not ok:
+        # Reject an incoherent read rather than emit likely-garbage notes.
+        return {"success": False, "notes": [], "musicxml": xml_text, "key_fifths": key_fifths,
+                "error": f"Audiveris read rejected as low-confidence: {reason}"}
+
     return {
-        "success": bool(tokens),
+        "success": True,
         "notes": tokens,
         "musicxml": xml_text,
         "key_fifths": key_fifths,
-        "error": "" if tokens else "Audiveris ran but found no pitched notes",
+        "error": "",
     }
