@@ -94,6 +94,32 @@ Expected arrange result for that example:
 - `G5 -> G4`
 - `A5 -> A4`
 
+## Notation Reading (Audiveris)
+
+Real notation reading is handled by the [Audiveris](https://github.com/Audiveris/audiveris)
+OMR engine, which reads pitch, octave, accidentals, key signature, and rhythm and
+exports MusicXML. The server calls it as a subprocess (the in-house heuristic
+detector in `omr_pipeline.py` remains only as a fallback).
+
+Audiveris is **not bundled** — build it once beside this repo:
+
+```bash
+# Java 25 is required by Audiveris 5.10.2
+brew install openjdk@25
+
+# clone beside the Clef Shift repo (a sibling directory named audiveris-src)
+git clone --depth 1 --branch 5.10.2 https://github.com/Audiveris/audiveris.git ../audiveris-src
+
+JAVA_HOME="$(brew --prefix)/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home" \
+  ../audiveris-src/gradlew -p ../audiveris-src :app:installDist
+```
+
+This produces the launcher at
+`../audiveris-src/app/build/install/app/bin/Audiveris`. The server finds it
+automatically; override with the `AUDIVERIS_CMD` and `AUDIVERIS_JAVA_HOME`
+environment variables if your paths differ. If Audiveris is absent, uploads fall
+back to the heuristic detector.
+
 ## Local Demo
 
 For the browser-based demo with upload preview and OCR support:
@@ -112,11 +138,10 @@ Important demo notes:
 
 - use `server.py` for the website, not `python3 -m http.server`
 - image and PDF uploads preview instantly in the browser
-- uploaded images and PDFs are sent to a local OCR endpoint automatically
-- OCR currently looks for note names such as `A4`, `Bb3`, and `F#5`
+- uploads are read by Audiveris (see above), which detects pitch, octave, accidentals, key signature, and rhythm
+- if Audiveris is not installed, uploads fall back to the in-house heuristic detector (filled noteheads only) and, failing that, to plain text OCR for typed note names such as `A4`, `Bb3`, `F#5`
 - the page can generate and download MusicXML from the structured score pipeline
-- the broader goal is a more autonomous end-to-end pipeline, but the current OCR is still limited when working directly from original sheet music
-- general text OCR works better than full sheet-music recognition, so scanned notation may still need manual correction
+- detection is honest: when nothing is read, the app says so rather than inventing notes
 
 ## Build
 
