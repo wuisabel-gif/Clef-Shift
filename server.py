@@ -11,7 +11,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from omr_pipeline import detect_notes
+from omr_pipeline import analyze_image
 from score_pipeline import build_score_data, score_to_musicxml, staff_position
 
 
@@ -144,15 +144,34 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 ocr_target = rendered_path
                 mode = "pdf"
 
+            # Notes are read from the NOTATION by the OMR detector. OCR is used
+            # only to surface incidental text (title, tempo, markings) and is
+            # never the primary note source -- see the project handoff.
             raw_text, stderr_text = ocr_file(ocr_target)
-            notes = normalize_note_tokens(raw_text)
-            detection_mode = "text-ocr"
 
-            if not notes:
-                omr_notes = detect_notes(ocr_target, source_clef)
-                if omr_notes:
-                    notes = omr_notes
-                    detection_mode = "music-image-detection"
+            debug_dir = ROOT / "debug"
+            result = analyze_image(ocr_target, source_clef, debug=True, debug_dir=debug_dir)
+
+            notes = result.notes
+            detection_mode = "music-notation" if result.success else "none"
+
+            # Honest fallback: only when NO staff was found at all (e.g. a photo
+            # of typed note names) do we offer note-like tokens parsed from OCR,
+            # and we label them clearly so the UI does not present them as
+            # notation that was read from a staff.
+            if not notes and result.staff_count == 0:
+                ocr_notes = normalize_note_tokens(raw_text)
+                if ocr_notes:
+                    notes = ocr_notes
+                    detection_mode = "text-ocr-fallback"
+
+            if detection_mode == "text-ocr-fallback":
+                message = (
+                    "No staff notation was found. The note names below were read "
+                    "from text in the image, not from musical notation."
+                )
+            else:
+                message = result.reason
 
             payload = {
                 "file_name": upload_name,
@@ -160,12 +179,13 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 "raw_text": raw_text,
                 "notes": notes,
                 "detection_mode": detection_mode,
+                "detection_success": result.success,
+                "staff_count": result.staff_count,
+                "note_count": result.note_count,
+                "spacing": round(result.spacing, 2),
+                "debug_images": [os.path.relpath(p, ROOT) for p in result.debug_images],
                 "warning": warning or stderr_text,
-                "message": (
-                    "Detected note names automatically"
-                    if notes
-                    else "No clear note names were detected automatically"
-                ),
+                "message": message,
             }
             self.respond_json(payload)
 
