@@ -603,6 +603,16 @@
     .button:active { transform: translateY(1px); }
 
     .status { transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease; }
+    /* Limited fallback engine notice (id-scoped so it wins over base .status) */
+    #status.is-warning {
+      border-color: rgba(184, 138, 59, 0.55);
+      background: #fbf1dc;
+      color: #6b4e1c;
+      font-weight: 600;
+    }
+    #status.is-warning::before {
+      content: "⚠ ";
+    }
     .status.is-busy {
       border-color: rgba(31, 92, 83, 0.28);
       background-size: 220% 100%;
@@ -1104,6 +1114,7 @@
     }
 
     async function renderConversion() {
+      statusBox.classList.remove("is-warning");
       const raw = noteInput.value.trim();
       if (!raw) {
         generatedNotes.textContent = "No converted notes yet";
@@ -1272,13 +1283,16 @@
           noteInput.value = payload.notes.join(" ");
           noteInput.placeholder = "Detected notes from the upload";
           await renderConversion();
-          const mode = payload.detection_mode || payload.ocr_mode || "detection";
-          setStatus(`${payload.message} using ${mode}`);
+          // Flag the limited fallback engine so users know sustained notes /
+          // accidentals / rhythm need the Audiveris path.
+          statusBox.classList.toggle("is-warning", Boolean(payload.fallback));
+          setStatus(payload.message);
           return true;
         }
 
         noteInput.value = "";
         noteInput.placeholder = "No notes detected from this upload";
+        statusBox.classList.remove("is-warning");
         setStatus(payload.message || "OCR finished but no notes were detected");
         return false;
       } catch (error) {
