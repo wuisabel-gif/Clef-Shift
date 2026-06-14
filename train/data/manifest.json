@@ -1,0 +1,1332 @@
+[
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_clean.png",
+    "piece": "cmajor",
+    "quality": "clean",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_blur.png",
+    "piece": "cmajor",
+    "quality": "blur",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_jpeg.jpg",
+    "piece": "cmajor",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_skew.png",
+    "piece": "cmajor",
+    "quality": "skew",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_noise.png",
+    "piece": "cmajor",
+    "quality": "noise",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_lowcontrast.png",
+    "piece": "cmajor",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/cmajor_photo.jpg",
+    "piece": "cmajor",
+    "quality": "photo",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_clean.png",
+    "piece": "fmajor",
+    "quality": "clean",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_blur.png",
+    "piece": "fmajor",
+    "quality": "blur",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_jpeg.jpg",
+    "piece": "fmajor",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_skew.png",
+    "piece": "fmajor",
+    "quality": "skew",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_noise.png",
+    "piece": "fmajor",
+    "quality": "noise",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_lowcontrast.png",
+    "piece": "fmajor",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/fmajor_photo.jpg",
+    "piece": "fmajor",
+    "quality": "photo",
+    "gt_tokens": [
+      "F4",
+      "G4",
+      "A4",
+      "Bb4",
+      "C5",
+      "D5",
+      "E5",
+      "F5"
+    ],
+    "gt_midi": [
+      65,
+      67,
+      69,
+      70,
+      72,
+      74,
+      76,
+      77
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_clean.png",
+    "piece": "dmajor",
+    "quality": "clean",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_blur.png",
+    "piece": "dmajor",
+    "quality": "blur",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_jpeg.jpg",
+    "piece": "dmajor",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_skew.png",
+    "piece": "dmajor",
+    "quality": "skew",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_noise.png",
+    "piece": "dmajor",
+    "quality": "noise",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_lowcontrast.png",
+    "piece": "dmajor",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/dmajor_photo.jpg",
+    "piece": "dmajor",
+    "quality": "photo",
+    "gt_tokens": [
+      "D4",
+      "E4",
+      "F#4",
+      "G4",
+      "A4",
+      "B4",
+      "C#5",
+      "D5"
+    ],
+    "gt_midi": [
+      62,
+      64,
+      66,
+      67,
+      69,
+      71,
+      73,
+      74
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_clean.png",
+    "piece": "triad",
+    "quality": "clean",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_blur.png",
+    "piece": "triad",
+    "quality": "blur",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_jpeg.jpg",
+    "piece": "triad",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_skew.png",
+    "piece": "triad",
+    "quality": "skew",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_noise.png",
+    "piece": "triad",
+    "quality": "noise",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_lowcontrast.png",
+    "piece": "triad",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/triad_photo.jpg",
+    "piece": "triad",
+    "quality": "photo",
+    "gt_tokens": [
+      "C4",
+      "E4",
+      "G4",
+      "C5",
+      "G4",
+      "E4",
+      "C4"
+    ],
+    "gt_midi": [
+      60,
+      64,
+      67,
+      72,
+      67,
+      64,
+      60
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_clean.png",
+    "piece": "mixed",
+    "quality": "clean",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_blur.png",
+    "piece": "mixed",
+    "quality": "blur",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_jpeg.jpg",
+    "piece": "mixed",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_skew.png",
+    "piece": "mixed",
+    "quality": "skew",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_noise.png",
+    "piece": "mixed",
+    "quality": "noise",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_lowcontrast.png",
+    "piece": "mixed",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/mixed_photo.jpg",
+    "piece": "mixed",
+    "quality": "photo",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_clean.png",
+    "piece": "pickup",
+    "quality": "clean",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_blur.png",
+    "piece": "pickup",
+    "quality": "blur",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_jpeg.jpg",
+    "piece": "pickup",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_skew.png",
+    "piece": "pickup",
+    "quality": "skew",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_noise.png",
+    "piece": "pickup",
+    "quality": "noise",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_lowcontrast.png",
+    "piece": "pickup",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/pickup_photo.jpg",
+    "piece": "pickup",
+    "quality": "photo",
+    "gt_tokens": [
+      "G4",
+      "C5",
+      "B4",
+      "A4",
+      "G4",
+      "F4",
+      "E4",
+      "D4"
+    ],
+    "gt_midi": [
+      67,
+      72,
+      71,
+      69,
+      67,
+      65,
+      64,
+      62
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_clean.png",
+    "piece": "sustained",
+    "quality": "clean",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_blur.png",
+    "piece": "sustained",
+    "quality": "blur",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_jpeg.jpg",
+    "piece": "sustained",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_skew.png",
+    "piece": "sustained",
+    "quality": "skew",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_noise.png",
+    "piece": "sustained",
+    "quality": "noise",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_lowcontrast.png",
+    "piece": "sustained",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/sustained_photo.jpg",
+    "piece": "sustained",
+    "quality": "photo",
+    "gt_tokens": [
+      "C4",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_clean.png",
+    "piece": "beams_rests",
+    "quality": "clean",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_blur.png",
+    "piece": "beams_rests",
+    "quality": "blur",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_jpeg.jpg",
+    "piece": "beams_rests",
+    "quality": "jpeg",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_skew.png",
+    "piece": "beams_rests",
+    "quality": "skew",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_noise.png",
+    "piece": "beams_rests",
+    "quality": "noise",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_lowcontrast.png",
+    "piece": "beams_rests",
+    "quality": "lowcontrast",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  },
+  {
+    "image": "/Users/harvardsummer/Library/Mobile Documents/com~apple~CloudDocs/GitHub/Clef Shift/train/data/images/beams_rests_photo.jpg",
+    "piece": "beams_rests",
+    "quality": "photo",
+    "gt_tokens": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4",
+      "C5",
+      "G4",
+      "E4"
+    ],
+    "gt_midi": [
+      60,
+      62,
+      64,
+      65,
+      67,
+      69,
+      71,
+      72,
+      67,
+      64
+    ]
+  }
+]

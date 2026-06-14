@@ -1,0 +1,7 @@
+{
+  "CTX_MEAN_MIN": 0.708,
+  "MEASURE_BAD_FRACTION": 0.5,
+  "calibrated_on": 21,
+  "accepts_correct": "17/17",
+  "accepts_wrong": "0/4"
+}
