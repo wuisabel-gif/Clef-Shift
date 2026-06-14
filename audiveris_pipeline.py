@@ -9,6 +9,7 @@ launcher, the same way server.py shells out to tesseract and ghostscript.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -47,6 +48,54 @@ MEASURE_BAD_FRACTION = 0.5  # ... this fraction of measures not adding up = garb
 CTX_MEAN_MIN = 0.55         # reject if the mean notehead contextual grade is below this
 GRADE_HEAD_FLOOR = 0.35     # a notehead grade below this counts as "weak"
 GRADE_WEAK_FRACTION = 0.5   # reject if more than this fraction of heads are weak
+
+# These two thresholds are the ones the calibration loop (train/) tunes. If a
+# calibrated gate_params.json is present and valid, we use it; otherwise we fall
+# back to the hand-set guesses above. Either way the gate stays honest.
+_GATE_PARAM_PATHS = [
+    os.environ.get("AUDIVERIS_GATE_PARAMS"),
+    str(ROOT / "gate_params.json"),
+    str(ROOT / "train" / "data" / "gate_params.json"),
+]
+
+
+def _load_gate_params() -> Optional[dict]:
+    """Load calibrated thresholds, failing safe to None on any problem."""
+    for candidate in _GATE_PARAM_PATHS:
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text())
+            ctx = float(data["CTX_MEAN_MIN"])
+            mbf = float(data["MEASURE_BAD_FRACTION"])
+            if 0.0 <= ctx <= 1.0 and 0.0 <= mbf <= 1.01:
+                return {"CTX_MEAN_MIN": ctx, "MEASURE_BAD_FRACTION": mbf, "path": str(path)}
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError, OSError):
+            continue  # malformed -> ignore, fall back
+    return None
+
+
+_GATE_PARAMS = _load_gate_params()
+if _GATE_PARAMS:
+    ACTIVE_CTX_MEAN_MIN = _GATE_PARAMS["CTX_MEAN_MIN"]
+    ACTIVE_MEASURE_BAD_FRACTION = _GATE_PARAMS["MEASURE_BAD_FRACTION"]
+    GATE_SOURCE = f"calibrated ({_GATE_PARAMS['path']})"
+else:
+    ACTIVE_CTX_MEAN_MIN = CTX_MEAN_MIN
+    ACTIVE_MEASURE_BAD_FRACTION = MEASURE_BAD_FRACTION
+    GATE_SOURCE = "fallback (hand-set guesses)"
+
+
+def gate_threshold_info() -> dict:
+    """Which thresholds the gate is using right now (for logging/UI)."""
+    return {
+        "source": GATE_SOURCE,
+        "ctx_mean_min": ACTIVE_CTX_MEAN_MIN,
+        "measure_bad_fraction": ACTIVE_MEASURE_BAD_FRACTION,
+    }
 
 
 def parse_omr_grades(omr_path: Path) -> Optional[dict]:
@@ -178,16 +227,18 @@ def assess_confidence(
     record("erratic_leaps", wild < WILD_JUMP_FRACTION, f"{round(wild * 100)}% of steps leap >2 octaves", "tokens")
 
     bad, total = _measure_coherence(xml_text)
-    meas_ok = not (total >= 2 and bad / total > MEASURE_BAD_FRACTION)
-    record("measure_arithmetic", meas_ok, f"{bad}/{total} measures don't add up", "musicxml")
+    meas_ok = not (total >= 2 and bad / total > ACTIVE_MEASURE_BAD_FRACTION)
+    record("measure_arithmetic", meas_ok,
+           f"{bad}/{total} measures don't add up (allowed ≤{ACTIVE_MEASURE_BAD_FRACTION:g})", "musicxml")
 
     if grades and grades.get("head_count", 0) > 0:
         mean_ctx = grades["mean_ctx"]
         weak_frac = sum(1 for h in grades["heads"] if h["ctx"] < GRADE_HEAD_FLOOR) / grades["head_count"]
-        grades_ok = mean_ctx >= CTX_MEAN_MIN and weak_frac <= GRADE_WEAK_FRACTION
+        grades_ok = mean_ctx >= ACTIVE_CTX_MEAN_MIN and weak_frac <= GRADE_WEAK_FRACTION
         record("audiveris_grades", grades_ok,
                f"mean ctx-grade {mean_ctx:.2f} (min {grades['min_ctx']:.2f}), "
-               f"{round(weak_frac * 100)}% of heads below {GRADE_HEAD_FLOOR}", "audiveris")
+               f"{round(weak_frac * 100)}% below {GRADE_HEAD_FLOOR}; "
+               f"need mean ≥{ACTIVE_CTX_MEAN_MIN:g} [{GATE_SOURCE.split()[0]}]", "audiveris")
     else:
         record("audiveris_grades", True, "no .omr grade data available", "audiveris")
 
@@ -297,6 +348,8 @@ def analyze_image(image_path: Path, timeout: int = 300) -> dict:
         "confidence": confidence,
         "grades": grades,
         "decision_path": decision_path,
+        "gate_source": GATE_SOURCE,
+        "gate_thresholds": gate_threshold_info(),
         "error": "" if accepted else (
             f"Audiveris read rejected (low confidence): {reason}" if reason
             else "Audiveris ran but found no pitched notes"

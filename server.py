@@ -12,7 +12,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from omr_pipeline import analyze_image
-from audiveris_pipeline import analyze_image as audiveris_analyze, audiveris_available
+from audiveris_pipeline import (
+    analyze_image as audiveris_analyze,
+    audiveris_available,
+    gate_threshold_info,
+)
 from score_pipeline import build_score_data, score_to_musicxml, staff_position
 
 
@@ -167,9 +171,11 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 # Surface the full decision path in the server log so it is
                 # always clear WHY a read was accepted or rejected.
                 conf = omr.get("confidence")
+                gate = omr.get("gate_thresholds") or {}
                 print(
-                    "[audiveris] accepted=%s confidence=%s notes=%d"
-                    % (omr.get("success"), conf, len(omr.get("notes") or [])),
+                    "[audiveris] accepted=%s confidence=%s notes=%d | gate=%s (ctx>=%s, measures<=%s)"
+                    % (omr.get("success"), conf, len(omr.get("notes") or []),
+                       gate.get("source"), gate.get("ctx_mean_min"), gate.get("measure_bad_fraction")),
                     flush=True,
                 )
                 for c in omr.get("decision_path", []):
@@ -229,6 +235,7 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 # Audiveris read transparency (always included when it ran).
                 "audiveris_confidence": omr.get("confidence"),
                 "audiveris_decision": omr.get("decision_path", []),
+                "audiveris_gate": omr.get("gate_thresholds"),
                 "audiveris_rejected": bool(omr) and not omr.get("success") and bool(omr.get("decision_path")),
             }
             if heuristic is not None:
@@ -285,6 +292,10 @@ def main() -> None:
     port = 8000
     server = ThreadingHTTPServer((host, port), ClefShiftHandler)
     print(f"Clef Shift server running at http://{host}:{port}")
+    _g = gate_threshold_info()
+    print(f"OMR confidence gate: {_g['source']} "
+          f"(ctx_mean_min={_g['ctx_mean_min']}, measure_bad_fraction={_g['measure_bad_fraction']})",
+          flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -120,6 +120,45 @@ automatically; override with the `AUDIVERIS_CMD` and `AUDIVERIS_JAVA_HOME`
 environment variables if your paths differ. If Audiveris is absent, uploads fall
 back to the heuristic detector.
 
+## What Testing the Reader Taught Me
+
+The hardest part of this project was never shifting a clef. It was trusting that
+the notes on the page had been read correctly in the first place.
+
+I can read these notes myself, so I always know what the right answer is. The
+optical reader (`Audiveris`) usually agrees with me on a clean scan, but on a
+lower-quality image it can do something worse than failing: it can hand back
+notes that look perfectly reasonable and are simply wrong. A wrong note
+presented confidently is more dangerous than no note at all.
+
+So instead of guessing whether a read was good, I built a way to measure it. I
+generate small scores where I already know every note (because I wrote them),
+render the same piece at different quality levels — `clean`, `blurry`, `skewed`,
+`noisy`, even a `phone-photo` look — run each one through the reader, and compare
+what it returns against the truth.
+
+A few things that taught me:
+
+- On clean scans the reader is dependable, and on badly degraded images it
+  mostly fails *safely* — it returns nothing rather than guessing. The real
+  danger lives in a narrow middle band where it produces notes that are partly
+  wrong.
+- My first confidence cutoffs were guesses, and they let some of those
+  middle-band wrong reads slip through.
+- Tuning the cutoffs against labeled examples instead of my intuition caught the
+  wrong reads while keeping the good ones. It also corrected a mistake of mine:
+  a rule I had set too strictly would have thrown out correct music that simply
+  began with a pickup measure.
+- The rule I keep coming back to: `prefer no notes over wrong notes`. If the
+  reader is not confident, the honest result is to say so, not to fill the page
+  with something plausible.
+
+What I have not proven yet, and want to be honest about: this is calibrated on
+`generated` scores, not real-world scans; the reader still struggles with
+sustained open noteheads; and the test that matters most is still a real
+uploaded image that failed. So I treat the current result as
+`measured, not finished`.
+
 ## Local Demo
 
 For the browser-based demo with upload preview and OCR support:
