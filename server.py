@@ -12,7 +12,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from omr_pipeline import analyze_image
-from oemer_pipeline import analyze_image as oemer_analyze, oemer_available
+from audiveris_pipeline import (
+    analyze_image as audiveris_analyze,
+    audiveris_available,
+    gate_threshold_info,
+)
 from score_pipeline import build_score_data, score_to_musicxml, staff_position
 
 
@@ -146,9 +150,10 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 mode = "pdf"
 
             # Note reading priority:
-            #   1) oemer (ML OMR) -- reads pitch, octave, accidentals, key
-            #      signature and rhythm from real engraved scores.
-            #   2) the in-house heuristic detector -- fast, no deps, fallback.
+            #   1) Audiveris (OMR engine) -- reads pitch, octave, accidentals, key
+            #      signature and rhythm from real engraved scores, fast.
+            #   2) the in-house heuristic detector -- fallback when Audiveris is
+            #      unavailable or finds nothing.
             #   3) plain OCR text -- last resort, clearly labelled so it is never
             #      presented as notation read from a staff.
             raw_text, stderr_text = ocr_file(ocr_target)
@@ -159,15 +164,31 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
             key_fifths = None
             message = ""
             heuristic = None
+            omr: dict = {}
 
-            if oemer_available():
-                omr = oemer_analyze(ocr_target)
+            if audiveris_available():
+                omr = audiveris_analyze(ocr_target)
+                # Surface the full decision path in the server log so it is
+                # always clear WHY a read was accepted or rejected.
+                conf = omr.get("confidence")
+                gate = omr.get("gate_thresholds") or {}
+                print(
+                    "[audiveris] accepted=%s confidence=%s notes=%d | gate=%s (ctx>=%s, measures<=%s)"
+                    % (omr.get("success"), conf, len(omr.get("notes") or []),
+                       gate.get("source"), gate.get("ctx_mean_min"), gate.get("measure_bad_fraction")),
+                    flush=True,
+                )
+                for c in omr.get("decision_path", []):
+                    print("  %s %-18s [%s] %s"
+                          % ("ok " if c["ok"] else "REJECT", c["check"], c["source"], c["detail"]),
+                          flush=True)
                 if omr.get("notes"):
                     notes = omr["notes"]
-                    detection_mode = "oemer-omr"
+                    detection_mode = "audiveris-omr"
                     source_musicxml = omr.get("musicxml", "")
                     key_fifths = omr.get("key_fifths")
-                    message = f"Read {len(notes)} note(s) from the notation with oemer."
+                    pct = f" (confidence {round(conf * 100)}%)" if conf is not None else ""
+                    message = f"Read {len(notes)} note(s) from the notation with Audiveris{pct}."
                 elif omr.get("error") and not warning:
                     warning = omr["error"]
 
@@ -176,7 +197,10 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 if heuristic.notes:
                     notes = heuristic.notes
                     detection_mode = "heuristic-detection"
-                    message = heuristic.reason
+                    message = (
+                        f"Limited fallback detection: read {len(notes)} solid notehead(s). "
+                        "Sustained notes, accidentals, and rhythm need the Audiveris engine."
+                    )
                 elif heuristic.staff_count == 0:
                     # No staff at all (e.g. a photo of typed note names): offer
                     # OCR tokens, clearly labelled as text rather than notation.
@@ -203,10 +227,16 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
                 "raw_text": raw_text,
                 "notes": notes,
                 "detection_mode": detection_mode,
+                "fallback": detection_mode in ("heuristic-detection", "text-ocr-fallback"),
                 "source_musicxml": source_musicxml,
                 "key_fifths": key_fifths,
                 "warning": warning or stderr_text,
                 "message": message,
+                # Audiveris read transparency (always included when it ran).
+                "audiveris_confidence": omr.get("confidence"),
+                "audiveris_decision": omr.get("decision_path", []),
+                "audiveris_gate": omr.get("gate_thresholds"),
+                "audiveris_rejected": bool(omr) and not omr.get("success") and bool(omr.get("decision_path")),
             }
             if heuristic is not None:
                 payload["detection_success"] = heuristic.success
@@ -262,6 +292,10 @@ def main() -> None:
     port = 8000
     server = ThreadingHTTPServer((host, port), ClefShiftHandler)
     print(f"Clef Shift server running at http://{host}:{port}")
+    _g = gate_threshold_info()
+    print(f"OMR confidence gate: {_g['source']} "
+          f"(ctx_mean_min={_g['ctx_mean_min']}, measure_bad_fraction={_g['measure_bad_fraction']})",
+          flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

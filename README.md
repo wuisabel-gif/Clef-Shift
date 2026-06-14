@@ -94,6 +94,71 @@ Expected arrange result for that example:
 - `G5 -> G4`
 - `A5 -> A4`
 
+## Notation Reading (Audiveris)
+
+Real notation reading is handled by the [Audiveris](https://github.com/Audiveris/audiveris)
+OMR engine, which reads pitch, octave, accidentals, key signature, and rhythm and
+exports MusicXML. The server calls it as a subprocess (the in-house heuristic
+detector in `omr_pipeline.py` remains only as a fallback).
+
+Audiveris is **not bundled** — build it once beside this repo:
+
+```bash
+# Java 25 is required by Audiveris 5.10.2
+brew install openjdk@25
+
+# clone beside the Clef Shift repo (a sibling directory named audiveris-src)
+git clone --depth 1 --branch 5.10.2 https://github.com/Audiveris/audiveris.git ../audiveris-src
+
+JAVA_HOME="$(brew --prefix)/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home" \
+  ../audiveris-src/gradlew -p ../audiveris-src :app:installDist
+```
+
+This produces the launcher at
+`../audiveris-src/app/build/install/app/bin/Audiveris`. The server finds it
+automatically; override with the `AUDIVERIS_CMD` and `AUDIVERIS_JAVA_HOME`
+environment variables if your paths differ. If Audiveris is absent, uploads fall
+back to the heuristic detector.
+
+## What Testing the Reader Taught Me
+
+The hardest part of this project was never shifting a clef. It was trusting that
+the notes on the page had been read correctly in the first place.
+
+I can read these notes myself, so I always know what the right answer is. The
+optical reader (`Audiveris`) usually agrees with me on a clean scan, but on a
+lower-quality image it can do something worse than failing: it can hand back
+notes that look perfectly reasonable and are simply wrong. A wrong note
+presented confidently is more dangerous than no note at all.
+
+So instead of guessing whether a read was good, I built a way to measure it. I
+generate small scores where I already know every note (because I wrote them),
+render the same piece at different quality levels — `clean`, `blurry`, `skewed`,
+`noisy`, even a `phone-photo` look — run each one through the reader, and compare
+what it returns against the truth.
+
+A few things that taught me:
+
+- On clean scans the reader is dependable, and on badly degraded images it
+  mostly fails *safely* — it returns nothing rather than guessing. The real
+  danger lives in a narrow middle band where it produces notes that are partly
+  wrong.
+- My first confidence cutoffs were guesses, and they let some of those
+  middle-band wrong reads slip through.
+- Tuning the cutoffs against labeled examples instead of my intuition caught the
+  wrong reads while keeping the good ones. It also corrected a mistake of mine:
+  a rule I had set too strictly would have thrown out correct music that simply
+  began with a pickup measure.
+- The rule I keep coming back to: `prefer no notes over wrong notes`. If the
+  reader is not confident, the honest result is to say so, not to fill the page
+  with something plausible.
+
+What I have not proven yet, and want to be honest about: this is calibrated on
+`generated` scores, not real-world scans; the reader still struggles with
+sustained open noteheads; and the test that matters most is still a real
+uploaded image that failed. So I treat the current result as
+`measured, not finished`.
+
 ## Local Demo
 
 For the browser-based demo with upload preview and OCR support:
@@ -112,11 +177,10 @@ Important demo notes:
 
 - use `server.py` for the website, not `python3 -m http.server`
 - image and PDF uploads preview instantly in the browser
-- uploaded images and PDFs are sent to a local OCR endpoint automatically
-- OCR currently looks for note names such as `A4`, `Bb3`, and `F#5`
+- uploads are read by Audiveris (see above), which detects pitch, octave, accidentals, key signature, and rhythm
+- if Audiveris is not installed, uploads fall back to the in-house heuristic detector (filled noteheads only) and, failing that, to plain text OCR for typed note names such as `A4`, `Bb3`, `F#5`
 - the page can generate and download MusicXML from the structured score pipeline
-- the broader goal is a more autonomous end-to-end pipeline, but the current OCR is still limited when working directly from original sheet music
-- general text OCR works better than full sheet-music recognition, so scanned notation may still need manual correction
+- detection is honest: when nothing is read, the app says so rather than inventing notes
 
 ## Build
 
