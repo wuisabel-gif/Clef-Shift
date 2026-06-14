@@ -13,6 +13,14 @@
       font-display: swap;
     }
 
+    @font-face {
+      font-family: "ALK Rounded Nusx Med";
+      src: url("/fonts/alk-rounded-nusx-med-webfont.ttf") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --bg: #f4ede0;
       --sidebar-bg: #eae0cd;
@@ -36,12 +44,12 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", system-ui, sans-serif;
       color: var(--ink);
       text-rendering: optimizeLegibility;
       background:
-        radial-gradient(circle at top left, rgba(31, 92, 83, 0.12), transparent 35%),
-        radial-gradient(circle at top right, rgba(184, 138, 59, 0.12), transparent 30%),
+        radial-gradient(circle at 50% -2%, rgba(214, 177, 92, 0.16), transparent 42%),
+        radial-gradient(circle at top left, rgba(31, 92, 83, 0.10), transparent 35%),
         linear-gradient(180deg, #fbf7f0 0%, var(--bg) 100%);
     }
 
@@ -55,9 +63,20 @@
     .hero {
       margin-bottom: 32px;
       padding: 36px 40px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(184, 138, 59, 0.18);
       border-radius: 24px;
-      background: linear-gradient(135deg, rgba(255, 253, 249, 0.96), rgba(246, 237, 223, 0.9));
+      background:
+        radial-gradient(
+          circle at 50% 0%,
+          rgba(214, 177, 92, 0.22),
+          transparent 40%
+        ),
+        linear-gradient(
+          180deg,
+          rgba(255, 253, 248, 0.86),
+          rgba(241, 230, 214, 0.80)
+        ),
+        url("/assets/ui/paper.png") center / cover;
       box-shadow: var(--shadow);
       position: relative;
       overflow: hidden;
@@ -73,13 +92,13 @@
       text-transform: uppercase;
       letter-spacing: 0.14em;
       font-size: 11px;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       font-weight: 700;
     }
 
     h1 {
       margin: 14px 0 10px;
-      font-family: "ALK Life", "Iowan Old Style", Georgia, serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       font-size: clamp(52px, 7vw, 84px);
       line-height: 1.0;
       letter-spacing: 0;
@@ -216,7 +235,7 @@
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       font-weight: 700;
     }
 
@@ -262,7 +281,7 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       transition: background 0.15s ease, transform 0.1s ease;
       text-align: center;
     }
@@ -321,7 +340,9 @@
 
     /* ---- Main Work Output Canvas Panel ---- */
     .preview-panel {
-      background: var(--paper);
+      background:
+        url("/assets/ui/watercolor.png") top right / 220px no-repeat,
+        var(--paper);
       border: 1px solid var(--line);
       border-radius: 24px;
       box-shadow: var(--shadow);
@@ -384,6 +405,7 @@
     }
 
     .notation-wrap {
+      position: relative;
       margin-bottom: 24px;
       border: 1px solid rgba(184, 138, 59, 0.18);
       border-radius: 16px;
@@ -391,6 +413,47 @@
       background: #fffdf9;
       box-shadow: inset 0 1px 4px rgba(0,0,0,0.01);
     }
+
+    /* "Converting…" indicator over the output while a read/convert runs */
+    .converting-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 16px;
+      background: rgba(255, 253, 249, 0.82);
+      backdrop-filter: blur(2px);
+      color: var(--accent-dark);
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      z-index: 5;
+    }
+    .converting-overlay[hidden] { display: none; }
+    .converting-overlay .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(31, 92, 83, 0.25);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: cs-spin 0.8s linear infinite;
+    }
+    .converting-overlay .dots::after {
+      content: "";
+      animation: cs-dots 1.2s steps(4, end) infinite;
+    }
+    @keyframes cs-spin { to { transform: rotate(360deg); } }
+    @keyframes cs-dots {
+      0% { content: ""; } 25% { content: "."; }
+      50% { content: ".."; } 75% { content: "..."; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .converting-overlay .spinner { animation: none; }
+      .converting-overlay .dots::after { content: "…"; animation: none; }
+    }
+    #convertButton[disabled] { opacity: 0.75; cursor: progress; }
 
     .notation-caption {
       margin-bottom: 12px;
@@ -402,7 +465,7 @@
       border: 1px solid rgba(184, 138, 59, 0.2);
       background: #fffbf2;
       color: var(--accent-dark);
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -429,7 +492,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       font-size: 11px;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
     }
 
     .generated-card p {
@@ -465,7 +528,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       font-size: 11px;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
     }
 
     .info-card p {
@@ -504,7 +567,7 @@
       margin: 0;
       color: var(--muted);
       font-size: 14px;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       letter-spacing: 0.04em;
     }
 
@@ -750,6 +813,10 @@
             <div class="generated-output">
               <h3>Generated Output</h3>
               <div class="notation-wrap">
+                <div id="convertingOverlay" class="converting-overlay" hidden>
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span>Converting<span class="dots"></span></span>
+                </div>
                 <figcaption id="notationCaption" class="notation-caption">Treble <span class="arrow">→</span> Bass</figcaption>
                 <svg id="notationSvg" class="notation-svg" viewBox="0 0 920 220" xmlns="http://www.w3.org/2000/svg" aria-label="Generated notation preview"></svg>
               </div>
@@ -802,6 +869,7 @@
     const generatedPositions = document.getElementById("generatedPositions");
     const notationSvg = document.getElementById("notationSvg");
     const notationCaption = document.getElementById("notationCaption");
+    const convertingOverlay = document.getElementById("convertingOverlay");
 
     let currentObjectUrl = null;
     let currentImageUrl = null;
@@ -849,6 +917,18 @@
 
     function setBusy(on) {
       statusBox.classList.toggle("is-busy", Boolean(on));
+    }
+
+    // Ref-counted "Converting…" indicator: shows an overlay over the output and
+    // disables the button while a read/convert is in flight (handles the OCR
+    // step calling the conversion step without flicker).
+    let convertingCount = 0;
+    function setConverting(on) {
+      convertingCount = Math.max(0, convertingCount + (on ? 1 : -1));
+      const active = convertingCount > 0;
+      if (convertingOverlay) convertingOverlay.hidden = !active;
+      convertButton.disabled = active;
+      convertButton.textContent = active ? "Converting…" : "Convert Notes";
     }
 
     function updateNotationCaption() {
@@ -1153,6 +1233,7 @@
 
       try {
         setBusy(true);
+        setConverting(true);
         const payload = await generateScoreData(raw);
         const convertedNotes = payload.notes || [];
         const toPositions = payload.positions || [];
@@ -1172,6 +1253,7 @@
         setStatus("Structured score generation is available only when the local Clef Shift server is running");
       } finally {
         setBusy(false);
+        setConverting(false);
       }
     }
 
@@ -1299,6 +1381,7 @@
     }
 
     async function attemptOcr(file) {
+      setConverting(true);
       try {
         const payload = await runOcr(file);
         const decisionNote = engineDecisionNote(payload);
@@ -1323,6 +1406,8 @@
         noteInput.placeholder = "Detection needs the local Clef Shift server";
         setStatus("OCR is available only when the local Clef Shift server is running on localhost:8000");
         return false;
+      } finally {
+        setConverting(false);
       }
     }
 
