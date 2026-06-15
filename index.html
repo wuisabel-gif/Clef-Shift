@@ -62,38 +62,59 @@
     /* ---- Hero ---- */
     .hero {
       margin-bottom: 32px;
-      padding: 36px 40px;
-      border: 1px solid rgba(184, 138, 59, 0.18);
+      padding: 52px 44px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      border: 1px solid rgba(184, 138, 59, 0.22);
       border-radius: 24px;
       background:
-        radial-gradient(
-          circle at 50% 0%,
-          rgba(214, 177, 92, 0.22),
-          transparent 40%
-        ),
         linear-gradient(
-          180deg,
-          rgba(255, 253, 248, 0.86),
-          rgba(241, 230, 214, 0.80)
+          90deg,
+          rgba(20, 38, 31, 0.86) 0%,
+          rgba(20, 38, 31, 0.60) 34%,
+          rgba(20, 38, 31, 0.12) 56%,
+          transparent 70%
         ),
-        url("/assets/ui/paper.png") center / cover;
+        url("/assets/ui/hero.png") center / cover;
       box-shadow: var(--shadow);
       position: relative;
       overflow: hidden;
+    }
+
+    /* Decorative inset double-rule gold frame (no image, no stretch). */
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 13px;
+      border: 1.5px solid rgba(214, 177, 92, 0.65);
+      border-radius: 16px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(214, 177, 92, 0.32);
+      border-radius: 12px;
+      pointer-events: none;
+      z-index: 2;
     }
 
     .eyebrow {
       display: inline-block;
       padding: 6px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(31, 92, 83, 0.15);
-      background: rgba(255, 255, 255, 0.8);
-      color: var(--accent);
+      border: 1px solid rgba(214, 177, 92, 0.45);
+      background: rgba(255, 255, 255, 0.12);
+      color: #f0e3c2;
       text-transform: uppercase;
       letter-spacing: 0.14em;
       font-size: 11px;
       font-family: "ALK Rounded Nusx Med", "Avenir Next", "Segoe UI", sans-serif;
       font-weight: 700;
+      backdrop-filter: blur(2px);
     }
 
     h1 {
@@ -102,14 +123,17 @@
       font-size: clamp(52px, 7vw, 84px);
       line-height: 1.0;
       letter-spacing: 0;
+      color: #fbf4e4;
+      text-shadow: 0 2px 18px rgba(12, 26, 21, 0.45);
     }
 
     .lead {
-      max-width: 680px;
+      max-width: 440px;
       margin: 0;
       font-size: clamp(18px, 2vw, 22px);
       line-height: 1.5;
-      color: #3a4a47;
+      color: rgba(244, 238, 224, 0.92);
+      text-shadow: 0 1px 10px rgba(12, 26, 21, 0.4);
     }
 
     .hero-row {
@@ -121,15 +145,28 @@
       z-index: 1;
     }
 
-    .hero-text { min-width: 0; }
+    .hero-text { min-width: 0; max-width: 480px; }
 
     .hero-staff {
       margin-top: 24px;
       height: 33px;
-      width: min(440px, 80%);
-      background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 1px, transparent 1px 8px);
+      width: min(380px, 90%);
+      background-image: repeating-linear-gradient(to bottom, rgba(240, 227, 194, 0.32) 0 1px, transparent 1px 8px);
       mask-image: linear-gradient(90deg, #000 40%, transparent);
       -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent);
+    }
+
+    /* Conservatory seal, stamped on the right of the hero scene. */
+    .hero-seal {
+      position: absolute;
+      right: 40px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 172px;
+      height: 172px;
+      z-index: 3;
+      pointer-events: none;
+      filter: drop-shadow(0 10px 22px rgba(10, 24, 19, 0.5));
     }
 
     .hero-emblem {
@@ -265,6 +302,19 @@
       box-shadow: 0 0 0 3px rgba(31, 92, 83, 0.12);
     }
 
+    /* Treble↔bass conversion emblem between the clef selectors */
+    .convert-emblem {
+      display: flex;
+      justify-content: center;
+      margin: 2px 0 -2px;
+    }
+    .convert-emblem img {
+      width: 124px;
+      height: auto;
+      opacity: 0.95;
+      filter: drop-shadow(0 4px 10px rgba(51, 41, 26, 0.12));
+    }
+
     /* ---- Button Hierarchy Refactor ---- */
     .button-row {
       display: flex;
@@ -341,13 +391,14 @@
     /* ---- Main Work Output Canvas Panel ---- */
     .preview-panel {
       background:
-        url("/assets/ui/watercolor.png") top right / 220px no-repeat,
+        url("/assets/ui/conservatory-accent.png") top right / 250px no-repeat,
         var(--paper);
       border: 1px solid var(--line);
       border-radius: 24px;
       box-shadow: var(--shadow);
       overflow: hidden;
     }
+
 
     .preview-header {
       padding: 28px 32px 20px;
@@ -396,6 +447,35 @@
       font-size: 16px;
       color: var(--muted);
       line-height: 1.4;
+    }
+
+    /* Empty-state: the music illustration (score -> MusicXML) fills the
+       output block as an opaque background, and the block is sized to the
+       image's 3:2 proportions. A real upload replaces the placeholder with
+       an <img>/<iframe>, hiding all this. */
+    .stage:has(.placeholder) {
+      display: block;
+      position: relative;
+      height: 0;
+      min-height: 0;
+      padding: 0 0 66.67%;   /* 1024 / 1536 -> match the illustration */
+      overflow: hidden;
+      border-color: transparent;
+      background: url("/assets/ui/music-illustration-bg.png") center / cover, var(--paper);
+    }
+
+    .stage:has(.placeholder) .placeholder {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      max-width: 320px;
+      padding: 16px 22px;
+      border-radius: 14px;
+      background: rgba(255, 253, 250, 0.82);
+      backdrop-filter: blur(3px);
+      box-shadow: 0 4px 14px rgba(51, 41, 26, 0.08);
     }
 
     .generated-output h3 {
@@ -737,10 +817,8 @@
           <p class="lead">Upload notation, convert notes between clefs, and export a clean practice-ready score.</p>
           <div class="hero-staff" aria-hidden="true"></div>
         </div>
-        <div class="hero-emblem" aria-hidden="true">
-          <span class="seal">𝄞<span class="arrow">→</span>𝄢</span>
-        </div>
       </div>
+      <img class="hero-seal" src="/assets/ui/conservatory-seal.png" alt="" aria-hidden="true">
     </section>
 
     <section class="app-grid">
@@ -761,6 +839,10 @@
             <option value="bass">Bass clef</option>
             <option value="alto">Alto clef</option>
           </select>
+        </div>
+
+        <div class="convert-emblem" aria-hidden="true">
+          <img src="/assets/ui/clef-conversion.png" alt="">
         </div>
 
         <div class="control-group">
