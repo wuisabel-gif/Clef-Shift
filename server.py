@@ -22,6 +22,7 @@ from score_pipeline import build_score_data, score_to_musicxml, staff_position
 
 ROOT = Path(__file__).resolve().parent
 NOTE_PATTERN = re.compile(r"\b([A-Ga-g])([#b]?)(-?\d+)\b")
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # scores are images/PDFs; 20 MB is generous
 
 
 def normalize_note_tokens(text: str) -> list[str]:
@@ -102,6 +103,12 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
 
         boundary = content_type.split(boundary_token, 1)[1].encode()
         content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length > MAX_UPLOAD_BYTES:
+            self.respond_json(
+                {"error": f"Upload too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"},
+                status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+            )
+            return
         body = self.rfile.read(content_length)
 
         parts = body.split(b"--" + boundary)
