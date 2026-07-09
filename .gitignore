@@ -12,3 +12,4 @@ __pycache__/
 
 # Local tooling config / vendored skills
 .claude/
+train/data/*.pdf

@@ -67,7 +67,9 @@ def _render_base(name: str, body: str) -> Image.Image:
     DATA.mkdir(parents=True, exist_ok=True)
     ly = DATA / f"{name}.ly"
     ly.write_text(LY_TMPL.replace("__BODY__", body))
-    subprocess.run(["lilypond", "-o", str(DATA / name), str(ly)], check=True, capture_output=True)
+    # -dno-point-and-click: otherwise the PDF embeds absolute source paths
+    subprocess.run(["lilypond", "-dno-point-and-click", "-o", str(DATA / name), str(ly)],
+                   check=True, capture_output=True)
     base = DATA / f"{name}_base.png"
     subprocess.run(["gs", "-sDEVICE=png16m", "-dNOPAUSE", "-dBATCH", "-dSAFER", "-r200",
                     "-dFirstPage=1", "-dLastPage=1", f"-sOutputFile={base}", str(DATA / f"{name}.pdf")],
