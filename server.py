@@ -23,6 +23,7 @@ from score_pipeline import build_score_data, score_to_musicxml, staff_position
 ROOT = Path(__file__).resolve().parent
 NOTE_PATTERN = re.compile(r"\b([A-Ga-g])([#b]?)(-?\d+)\b")
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # scores are images/PDFs; 20 MB is generous
+ALLOWED_UPLOAD_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".webp", ".pdf"}
 
 
 def normalize_note_tokens(text: str) -> list[str]:
@@ -140,6 +141,13 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
         with tempfile.TemporaryDirectory(prefix="clef_shift_ocr_") as temp_dir:
             temp_path = Path(temp_dir)
             suffix = Path(upload_name).suffix.lower() or mimetypes.guess_extension(self.headers.get("Content-Type", "")) or ""
+            if suffix not in ALLOWED_UPLOAD_SUFFIXES:
+                self.respond_json(
+                    {"error": f"Unsupported file type {suffix or '(none)'}; "
+                              f"expected one of {', '.join(sorted(ALLOWED_UPLOAD_SUFFIXES))}"},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
             source_path = temp_path / f"source{suffix}"
             source_path.write_bytes(upload_bytes)
 
