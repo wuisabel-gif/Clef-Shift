@@ -15,4 +15,5 @@ fi
 score_file="$1"
 export XDG_CACHE_HOME="${PWD}/.cache"
 mkdir -p "${XDG_CACHE_HOME}/fontconfig"
-lilypond "$score_file"
+# -dno-point-and-click: otherwise the PDF embeds absolute source paths
+lilypond -dno-point-and-click "$score_file"
