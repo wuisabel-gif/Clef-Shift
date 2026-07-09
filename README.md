@@ -120,6 +120,17 @@ automatically; override with the `AUDIVERIS_CMD` and `AUDIVERIS_JAVA_HOME`
 environment variables if your paths differ. If Audiveris is absent, uploads fall
 back to the heuristic detector.
 
+### Recalibrating the confidence gate
+
+The gate thresholds in `train/data/gate_params.json` come from a labeled corpus.
+To regenerate them (needs LilyPond, Ghostscript, and Audiveris):
+
+```bash
+python3 train/corpus.py     # render score images at several quality levels
+python3 train/collect.py    # run Audiveris on each, label against ground truth (slow)
+python3 train/calibrate.py  # fit thresholds, write train/data/gate_params.json
+```
+
 ## What Testing the Reader Taught Me
 
 The hardest part of this project was never shifting a clef. It was trusting that
