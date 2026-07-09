@@ -304,7 +304,7 @@ class ClefShiftHandler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     host = "127.0.0.1"
-    port = 8000
+    port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer((host, port), ClefShiftHandler)
     print(f"Clef Shift server running at http://{host}:{port}")
     _g = gate_threshold_info()
