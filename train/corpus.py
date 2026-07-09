@@ -117,7 +117,7 @@ def render_corpus() -> None:
         for quality, im, ext in _variants(base):
             path = IMG / f"{name}_{quality}.{ext}"
             im.save(path, quality=35) if ext == "jpg" else im.save(path)
-            manifest.append({"image": str(path), "piece": name, "quality": quality,
+            manifest.append({"image": str(path.relative_to(ROOT)), "piece": name, "quality": quality,
                              "gt_tokens": gt, "gt_midi": gt_midi})
     (DATA / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(f"rendered {len(manifest)} images across {len(PIECES)} pieces "

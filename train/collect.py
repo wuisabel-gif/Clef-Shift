@@ -74,7 +74,7 @@ def main() -> None:
     manifest = json.loads((DATA / "manifest.json").read_text())
     rows = []
     for item in manifest:
-        xml, grades, err = run_audiveris(Path(item["image"]))
+        xml, grades, err = run_audiveris(ROOT / item["image"])
         if not xml:
             rows.append({**_meta(item), "audiveris_ok": False, "notes": [], "agreement": 0.0,
                          "should_accept": False, "features": None, "note": err[:80]})
